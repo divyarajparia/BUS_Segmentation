@@ -1,0 +1,21 @@
+==========================================
+SLURM_JOB_ID = 866731
+SLURM_JOB_NODELIST = d23-16
+TMPDIR = /tmp/SLURM_866731
+==========================================
+Hello! We start experiment for 2D Image Segmentation!
+You are using "cuda" device.
+STEP1. Load BUSI Test Dataset Loader...
+STEP2. Load MADGNet ...
+Complete loading your pretrained backbone resnest50
+TRAINING
+STEP1. Load BUS-UCLM Train Dataset Loader...
+target 4, output 3
+Traceback (most recent call last):
+  File "IS2D_main.py", line 95, in <module>
+    IS2D_main(args)
+  File "IS2D_main.py", line 36, in IS2D_main
+    experiment.train()
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/MADGNet/IS2D_Experiment/biomedical_2dimage_segmentation_experiment.py", line 86, in train
+    print(f'target {target.type()}, output {output.type()}')
+AttributeError: 'list' object has no attribute 'type'

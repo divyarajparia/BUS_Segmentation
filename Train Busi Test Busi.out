@@ -1,0 +1,74 @@
+Hello! We start experiment for 2D Image Segmentation!
+You are using "cuda" device.
+STEP1. Load BUSI Test Dataset Loader...
+STEP2. Load MADGNet ...
+Complete loading your pretrained backbone resnest50
+INFERENCE
+Your model is loaded from model_weights/final_model_weights/BUSI/model_weights/model_weight(EPOCH 100).pth.tar.
+.pth.tar keys() =  dict_keys(['model_state_dict', 'optimizer_state_dict', 'current_epoch']).
+EPOCH 100 | 10/162(6.0%) COMPLETE
+EPOCH 100 | 20/162(12.0%) COMPLETE
+EPOCH 100 | 30/162(19.0%) COMPLETE
+EPOCH 100 | 40/162(25.0%) COMPLETE
+EPOCH 100 | 50/162(31.0%) COMPLETE
+EPOCH 100 | 60/162(37.0%) COMPLETE
+EPOCH 100 | 70/162(43.0%) COMPLETE
+EPOCH 100 | 80/162(49.0%) COMPLETE
+EPOCH 100 | 90/162(56.0%) COMPLETE
+EPOCH 100 | 100/162(62.0%) COMPLETE
+EPOCH 100 | 110/162(68.0%) COMPLETE
+EPOCH 100 | 120/162(74.0%) COMPLETE
+EPOCH 100 | 130/162(80.0%) COMPLETE
+EPOCH 100 | 140/162(86.0%) COMPLETE
+EPOCH 100 | 150/162(93.0%) COMPLETE
+EPOCH 100 | 160/162(99.0%) COMPLETE
+Save MADGNet Test Results...
+###################### TEST REPORT ######################
+Mean DSC    :	 0.8182
+Mean IoU    :	 0.7387
+Mean WeightedF-Measure    :	 0.8004
+Mean S-Measure    :	 0.8405
+Mean E-Measure    :	 0.9201
+Mean MAE    :	 0.0422
+###################### TEST REPORT ######################
+
+test results txt file is saved at model_weights/final_model_weights/BUSI/test_reports/test_report(EPOCH 100).txt
+Hello! We start experiment for 2D Image Segmentation!
+You are using "cuda" device.
+STEP1. Load STU Test Dataset Loader...
+STEP2. Load MADGNet ...
+Complete loading your pretrained backbone resnest50
+INFERENCE
+Your model is loaded from model_weights/final_model_weights/BUSI/model_weights/model_weight(EPOCH 100).pth.tar.
+.pth.tar keys() =  dict_keys(['model_state_dict', 'optimizer_state_dict', 'current_epoch']).
+Traceback (most recent call last):
+  File "IS2D_main.py", line 88, in <module>
+    IS2D_main(args)
+  File "IS2D_main.py", line 35, in IS2D_main
+    test_results = experiment.inference()
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/MADGNet/IS2D_Experiment/biomedical_2dimage_segmentation_experiment.py", line 20, in inference
+    test_results = self.inference_phase(self.args.final_epoch)
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/MADGNet/IS2D_Experiment/biomedical_2dimage_segmentation_experiment.py", line 31, in inference_phase
+    for batch_idx, (image, target) in enumerate(self.test_loader):
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 530, in __next__
+    data = self._next_data()
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1224, in _next_data
+    return self._process_data(data)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 1250, in _process_data
+    data.reraise()
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/_utils.py", line 457, in reraise
+    raise exception
+FileNotFoundError: Caught FileNotFoundError in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/utils/data/_utils/worker.py", line 287, in _worker_loop
+    data = fetcher.fetch(index)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 49, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/utils/data/_utils/fetch.py", line 49, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/MADGNet/dataset/BioMedicalDataset/STUSegmentationDataset.py", line 27, in __getitem__
+    image = Image.open(image_path).convert('L')
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/PIL/Image.py", line 2975, in open
+    fp = builtins.open(filename, "rb")
+FileNotFoundError: [Errno 2] No such file or directory: 'dataset/BioMedicalDataset/STU/image/Test_Image_38.png'
+

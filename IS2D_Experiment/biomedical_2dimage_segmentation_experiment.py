@@ -7,6 +7,8 @@ from ._IS2Dbase import BaseSegmentationExperiment
 from utils.calculate_metrics import BMIS_Metrics_Calculator
 from utils.load_functions import load_model
 
+import os
+
 class BMISegmentationExperiment(BaseSegmentationExperiment):
     def __init__(self, args):
         super(BMISegmentationExperiment, self).__init__(args)
@@ -62,3 +64,48 @@ class BMISegmentationExperiment(BaseSegmentationExperiment):
         ]
 
         return transforms.Compose(transform_list), transforms.Compose(target_transform_list)
+    
+    # Add to BMISegmentationExperiment
+
+    def train(self):
+        print("TRAINING")
+        self.setup_train_loader()
+        self.model.train()
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.lr if hasattr(self.args, 'lr') else 1e-4)
+        criterion = torch.nn.BCEWithLogitsLoss()
+
+        for epoch in range(1, self.args.final_epoch + 1):
+            total_loss = 0.0
+            for batch_idx, (image, target) in enumerate(self.train_loader):
+                image, target = image.to(self.args.device), target.to(self.args.device)
+                optimizer.zero_grad()
+                output = self.model(image, mode='train')
+                output = output[0][0]
+                if isinstance(output, list):
+                    output = torch.tensor(output)
+
+                print(f'target {len(target)}, output {len(output)}')
+
+
+                print(f'target {target.type()}, output {output.type()}')
+                loss = criterion(output, target)
+
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item() * image.size(0)
+
+                if (batch_idx + 1) % self.args.step == 0:
+                    print(f"EPOCH {epoch} | {batch_idx + 1}/{len(self.train_loader)} ({(batch_idx + 1) / len(self.train_loader) * 100:.1f}%) COMPLETE")
+
+            avg_loss = total_loss / len(self.train_loader.dataset)
+            print(f"EPOCH {epoch} | Average Loss: {avg_loss:.4f}")
+
+            # Save model checkpoint
+            save_dir = os.path.join(self.args.save_path, self.args.train_data_type, "model_weights")
+            os.makedirs(save_dir, exist_ok=True)
+            save_path = os.path.join(save_dir, f"model_weight(EPOCH {epoch}).pth.tar")
+            torch.save({
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'current_epoch': epoch
+            }, save_path)

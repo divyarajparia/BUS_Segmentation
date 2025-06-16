@@ -1,0 +1,60 @@
+Hello! We start experiment for 2D Image Segmentation!
+You are using "cuda" device.
+STEP1. Load BUSI Test Dataset Loader...
+STEP2. Load MADGNet ...
+Complete loading your pretrained backbone resnest50
+INFERENCE
+Your model is loaded from model_weights/final_model_weights/BUSI/model_weights/model_weight(EPOCH 100).pth.tar.
+.pth.tar keys() =  dict_keys(['model_state_dict', 'optimizer_state_dict', 'current_epoch']).
+EPOCH 100 | 10/162(6.0%) COMPLETE
+EPOCH 100 | 20/162(12.0%) COMPLETE
+EPOCH 100 | 30/162(19.0%) COMPLETE
+EPOCH 100 | 40/162(25.0%) COMPLETE
+EPOCH 100 | 50/162(31.0%) COMPLETE
+EPOCH 100 | 60/162(37.0%) COMPLETE
+EPOCH 100 | 70/162(43.0%) COMPLETE
+EPOCH 100 | 80/162(49.0%) COMPLETE
+EPOCH 100 | 90/162(56.0%) COMPLETE
+EPOCH 100 | 100/162(62.0%) COMPLETE
+EPOCH 100 | 110/162(68.0%) COMPLETE
+EPOCH 100 | 120/162(74.0%) COMPLETE
+EPOCH 100 | 130/162(80.0%) COMPLETE
+EPOCH 100 | 140/162(86.0%) COMPLETE
+EPOCH 100 | 150/162(93.0%) COMPLETE
+EPOCH 100 | 160/162(99.0%) COMPLETE
+Save MADGNet Test Results...
+###################### TEST REPORT ######################
+Mean DSC    :	 0.8182
+Mean IoU    :	 0.7387
+Mean WeightedF-Measure    :	 0.8004
+Mean S-Measure    :	 0.8405
+Mean E-Measure    :	 0.9201
+Mean MAE    :	 0.0422
+###################### TEST REPORT ######################
+
+test results txt file is saved at model_weights/final_model_weights/BUSI/test_reports/test_report(EPOCH 100).txt
+Hello! We start experiment for 2D Image Segmentation!
+You are using "cuda" device.
+STEP1. Load BUS-UCLM Test Dataset Loader...
+STEP2. Load MADGNet ...
+Complete loading your pretrained backbone resnest50
+INFERENCE
+Your model is loaded from model_weights/final_model_weights/BUSI/model_weights/model_weight(EPOCH 100).pth.tar.
+.pth.tar keys() =  dict_keys(['model_state_dict', 'optimizer_state_dict', 'current_epoch']).
+EPOCH 100 | 10/60(17.0%) COMPLETE
+EPOCH 100 | 20/60(33.0%) COMPLETE
+EPOCH 100 | 30/60(50.0%) COMPLETE
+EPOCH 100 | 40/60(67.0%) COMPLETE
+EPOCH 100 | 50/60(83.0%) COMPLETE
+EPOCH 100 | 60/60(100.0%) COMPLETE
+Save MADGNet Test Results...
+###################### TEST REPORT ######################
+Mean DSC    :	 0.3987
+Mean IoU    :	 0.3491
+Mean WeightedF-Measure    :	 0.3794
+Mean S-Measure    :	 0.8035
+Mean E-Measure    :	 0.8108
+Mean MAE    :	 0.0961
+###################### TEST REPORT ######################
+
+test results txt file is saved at model_weights/final_model_weights/BUSI/test_reports/Generalizability test_reports(BUSI->BUS-UCLM).txt

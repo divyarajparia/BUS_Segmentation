@@ -1,0 +1,32 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.so
+
+# Jupyter and VS Code stuff
+.ipynb_checkpoints/
+.vscode/
+
+# Environment folders
+env/
+venv/
+.madgnet_env*
+*.env
+
+# Logs and outputs
+# *.log
+# logs/
+# *.out
+# *.err
+
+# Model files
+*.pt
+*.pth
+*.ckpt
+*.h5
+model_weights/
+final_model_weights/
+*.zip
+
+# Datasets
+dataset/

@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#SBATCH --account=ruishanl_1185
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gpus-per-task=2
+#SBATCH --mem=30G
+#SBATCH --time=3:00:00
+#SBATCH --job-name=is2d_run
+#SBATCH --output=logs/is2d_%j.out
+#SBATCH --error=logs/is2d_%j.err
+
+# Load modules
+module purge
+module load gcc/13.3.0
+module load cudnn/8.9.7.29-12-cuda
+module load openmpi/5.0.5
+module load cuda/12.6.3
+module load conda
+
+# Activate conda environment
+conda init
+source ~/.bashrc
+conda activate madgnet_env_gpu
+
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+# Run the script with the specified arguments
+python IS2D_main.py \
+    --num_workers 4 \
+    --data_path dataset/BioMedicalDataset \
+    --save_path model_weights \
+    --train_data_type BUS-UCLM \
+    --test_data_type BUS-UCLM \
+    --final_epoch 100 \
+    --train
