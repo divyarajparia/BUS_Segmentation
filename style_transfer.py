@@ -8,7 +8,7 @@ from PIL import Image
 import numpy as np
 import random
 from tqdm import tqdm
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Set random seeds for reproducibility
 torch.manual_seed(42)
@@ -127,19 +127,13 @@ class StyleTransferDataset(Dataset):
     def __getitem__(self, idx):
         # Load BUSI image
         busi_image_path = self.busi_frame.image_path.iloc[idx]
-        if ' ' in busi_image_path:
-            busi_type, busi_fn = busi_image_path.split(maxsplit=1)
-        else:
-            busi_type, busi_fn = 'benign', busi_image_path  # fallback, adjust as needed
-        busi_img_path = os.path.join(self.busi_dir, busi_type, 'image', busi_fn)
+        busi_type = busi_image_path.split()[0]
+        busi_img_path = os.path.join(self.busi_dir, busi_type, 'image', busi_image_path)
         
         # Load BUS-UCLM image
         bus_uclm_image_path = self.bus_uclm_frame.image_path.iloc[idx]
-        if ' ' in bus_uclm_image_path:
-            bus_uclm_type, bus_uclm_fn = bus_uclm_image_path.split(maxsplit=1)
-        else:
-            bus_uclm_type, bus_uclm_fn = 'benign', bus_uclm_image_path  # fallback, adjust as needed
-        bus_uclm_img_path = os.path.join(self.bus_uclm_dir, bus_uclm_type, 'images', bus_uclm_fn)
+        bus_uclm_type = bus_uclm_image_path.split()[0]
+        bus_uclm_img_path = os.path.join(self.bus_uclm_dir, bus_uclm_type, 'images', bus_uclm_image_path)
         
         busi_img = Image.open(busi_img_path).convert('L')
         bus_uclm_img = Image.open(bus_uclm_img_path).convert('L')
