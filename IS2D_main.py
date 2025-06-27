@@ -95,7 +95,7 @@ if __name__=='__main__' :
             IS2D_main(args)
 
     if args.train_data_type == 'BUSIBUSUCLM':
-        for test_data_type in ['BUSI']:
+        for test_data_type in ['BUSI', 'BUS-UCLM']:
             args.test_data_type = test_data_type
             IS2D_main(args)
 

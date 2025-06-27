@@ -83,8 +83,8 @@ class BaseSegmentationExperiment(object):
         elif self.args.train_data_type == 'BUSIBUSUCLM':
             busi_dataset = BUSISegmentationDataset('dataset/BioMedicalDataset/BUSI', mode='train', transform=train_image_transform, target_transform=train_target_transform)
             bus_uclm_dataset = BUSUCLMSegmentationDataset('dataset/BioMedicalDataset/BUS-UCLM', mode='train', transform=train_image_transform, target_transform=train_target_transform)
-            # train_dataset = ConcatDataset([busi_dataset, bus_uclm_dataset])
-            train_dataset = busi_dataset
+            train_dataset = ConcatDataset([busi_dataset, bus_uclm_dataset])
+            
             # combined_dataset = ConcatDataset([busi_dataset, bus_uclm_dataset])
             # train_ = DataLoader(combined_dataset, batch_size=..., shuffle=True, ...)
 
@@ -92,4 +92,4 @@ class BaseSegmentationExperiment(object):
         else:
             print("Wrong Train Dataset")
             sys.exit()
-        self.train_loader = DataLoader(train_dataset, batch_size=self.args.batch_size if hasattr(self.args, 'batch_size') else 4, shuffle=True, num_workers=self.args.num_workers, pin_memory=True)
+        self.train_loader = DataLoader(train_dataset, batch_size=self.args.batch_size if hasattr(self.args, 'batch_size') else 4, shuffle=True, num_workers=self.args.num_workers, pin_memory=True, drop_last=True)
