@@ -12,8 +12,8 @@ def collect_pairs(class_name):
     for fn in os.listdir(img_dir):
         if fn.lower().endswith(".png") and os.path.exists(os.path.join(mask_dir, fn)):
             pairs.append({
-                "image_path": f"{class_name} {fn}",
-                "mask_path": f"{class_name} {fn}"
+                "image_path": fn,
+                "mask_path": fn
             })
     return pairs
 

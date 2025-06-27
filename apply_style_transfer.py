@@ -81,7 +81,7 @@ def create_combined_dataset(busi_dir, style_transferred_dir, output_dir):
     # Create output directory structure
     os.makedirs(os.path.join(output_dir, 'benign', 'images'), exist_ok=True)
     os.makedirs(os.path.join(output_dir, 'benign', 'masks'), exist_ok=True)
-    os.makedirs(os.makedirs(os.path.join(output_dir, 'malignant', 'images'), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, 'malignant', 'images'), exist_ok=True)
     os.makedirs(os.path.join(output_dir, 'malignant', 'masks'), exist_ok=True)
     
     # Copy BUSI images
