@@ -132,8 +132,8 @@ class StyleTransferDataset(Dataset):
         
         # Load BUS-UCLM image
         bus_uclm_image_path = self.bus_uclm_frame.image_path.iloc[idx]
-        bus_uclm_type = bus_uclm_image_path.split()[0]
-        bus_uclm_img_path = os.path.join(self.bus_uclm_dir, bus_uclm_type, 'images', bus_uclm_image_path)
+        bus_uclm_type, bus_uclm_fn = bus_uclm_image_path.split(maxsplit=1)
+        bus_uclm_img_path = os.path.join(self.bus_uclm_dir, bus_uclm_type, 'images', bus_uclm_fn)
         
         busi_img = Image.open(busi_img_path).convert('L')
         bus_uclm_img = Image.open(bus_uclm_img_path).convert('L')
