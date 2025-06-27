@@ -22,7 +22,7 @@ def IS2D_main(args) :
         print("Please explicitely write the dataset type")
         sys.exit()
 
-    if args.train_data_type in ['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM']:
+    if args.train_data_type in ['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM']:
         args.num_channels = 3
         args.image_size = 352
         args.num_classes = 1
@@ -43,7 +43,7 @@ def IS2D_main(args) :
 if __name__=='__main__' :
     parser = argparse.ArgumentParser(description='Following are the arguments that can be passed form the terminal itself!')
     parser.add_argument('--data_path', type=str, default='dataset/BioMedicalDataset')
-    parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM'])
+    parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM'])
     parser.add_argument('--test_data_type', type=str, required=False, choices=['CVC-ClinicDB', 'Kvasir', 'CVC-300', 'CVC-ColonDB', 'ETIS-LaribPolypDB',
                                                                                             'DSB2018', 'MonuSeg2018', 'ISIC2018', 'PH2', 'COVID19', 'COVID19_2', 'BUSI', 'STU', 'BUS-UCLM'])
 
@@ -90,10 +90,14 @@ if __name__=='__main__' :
             IS2D_main(args)
 
     if args.train_data_type == 'BUS-UCLM':
-        for test_data_type in ['BUSI', 'BUS-UCLM']:
+        for test_data_type in ['BUS-UCLM', 'BUSI']:
             args.test_data_type = test_data_type
             IS2D_main(args)
 
+    if args.train_data_type == 'BUSIBUSUCLM':
+        for test_data_type in ['BUSI']:
+            args.test_data_type = test_data_type
+            IS2D_main(args)
 
     # Cell Segmentation Generalizability Test
     if args.train_data_type == 'DSB2018':

@@ -17,6 +17,8 @@ from dataset.BioMedicalDataset.BUSISegmentationDataset import *
 from dataset.BioMedicalDataset.STUSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSUCLMSegmentationDataset import *
 from utils.get_functions import *
+from torch.utils.data import ConcatDataset
+
 
 class BaseSegmentationExperiment(object):
     def __init__(self, args):
@@ -75,6 +77,15 @@ class BaseSegmentationExperiment(object):
         elif self.args.train_data_type == 'BUSI':
             train_dataset = BUSISegmentationDataset(self.args.train_dataset_dir, mode='train', transform=train_image_transform, target_transform=train_target_transform)
         # Add other datasets as needed
+        elif self.args.train_data_type == 'BUSIBUSUCLM':
+            busi_dataset = BUSISegmentationDataset('dataset/BioMedicalDataset/BUSI', mode='train', transform=train_image_transform, target_transform=train_target_transform)
+            bus_uclm_dataset = BUSUCLMSegmentationDataset('dataset/BioMedicalDataset/BUS-UCLM', mode='train', transform=train_image_transform, target_transform=train_target_transform)
+            # train_dataset = ConcatDataset([busi_dataset, bus_uclm_dataset])
+            train_dataset = busi_dataset
+            # combined_dataset = ConcatDataset([busi_dataset, bus_uclm_dataset])
+            # train_ = DataLoader(combined_dataset, batch_size=..., shuffle=True, ...)
+
+
         else:
             print("Wrong Train Dataset")
             sys.exit()

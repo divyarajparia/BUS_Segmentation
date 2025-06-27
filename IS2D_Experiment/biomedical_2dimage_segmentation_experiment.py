@@ -80,15 +80,11 @@ class BMISegmentationExperiment(BaseSegmentationExperiment):
                 image, target = image.to(self.args.device), target.to(self.args.device)
                 optimizer.zero_grad()
                 output = self.model(image, mode='train')
-                output = output[0][0]
-                if isinstance(output, list):
-                    output = torch.tensor(output)
+                main_map = output[3][0]
+                loss = criterion(main_map, target)
 
-                print(f'target {len(target)}, output {len(output)}')
-
-
-                print(f'target {target.type()}, output {output.type()}')
-                loss = criterion(output, target)
+                # print(f'target {target.type()}, output {output.type()}')
+                # loss = criterion(output, target)
 
                 loss.backward()
                 optimizer.step()
