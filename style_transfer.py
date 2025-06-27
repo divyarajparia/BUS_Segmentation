@@ -8,7 +8,7 @@ from PIL import Image
 import numpy as np
 import random
 from tqdm import tqdm
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Set random seeds for reproducibility
 torch.manual_seed(42)
