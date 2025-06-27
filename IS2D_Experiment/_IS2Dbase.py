@@ -16,6 +16,7 @@ from dataset.BioMedicalDataset.Covid19CTScan2Dataset import *
 from dataset.BioMedicalDataset.BUSISegmentationDataset import *
 from dataset.BioMedicalDataset.STUSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSUCLMSegmentationDataset import *
+from dataset.BioMedicalDataset.BUSICombinedDataset import *
 from utils.get_functions import *
 from torch.utils.data import ConcatDataset
 
@@ -76,6 +77,8 @@ class BaseSegmentationExperiment(object):
             train_dataset = BUSUCLMSegmentationDataset(self.args.train_dataset_dir, mode='train', transform=train_image_transform, target_transform=train_target_transform)
         elif self.args.train_data_type == 'BUSI':
             train_dataset = BUSISegmentationDataset(self.args.train_dataset_dir, mode='train', transform=train_image_transform, target_transform=train_target_transform)
+        elif self.args.train_data_type == 'BUSI-Combined':
+            train_dataset = BUSICombinedDataset(self.args.train_dataset_dir, mode='train', transform=train_image_transform, target_transform=train_target_transform)
         # Add other datasets as needed
         elif self.args.train_data_type == 'BUSIBUSUCLM':
             busi_dataset = BUSISegmentationDataset('dataset/BioMedicalDataset/BUSI', mode='train', transform=train_image_transform, target_transform=train_target_transform)
