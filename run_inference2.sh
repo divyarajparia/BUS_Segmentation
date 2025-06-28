@@ -6,11 +6,4 @@
 #SBATCH --mem=32G
 #SBATCH --time=3:00:00
 
-python3 IS2D_main.py \
-  --num_workers 4 \
-  --data_path dataset/BioMedicalDataset \
-  --save_path model_weights\
-  --train_data_type BUSIBUSUCLM \
-  --test_data_type BUSUCLM \
-  --final_epoch 5 \
-  --train
+python3 apply_style_transfer.py
