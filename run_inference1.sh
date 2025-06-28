@@ -10,6 +10,7 @@ python3 IS2D_main.py \
   --num_workers 4 \
   --data_path dataset/BioMedicalDataset \
   --save_path model_weights\
-  --train_data_type BUSIBUSUCLM \
-  --test_data_type BUS-UCLM \
-  --final_epoch 100 \
+  --train_data_type BUSI-Combined \
+  --test_data_type BUSI \
+  --final_epoch 5 \
+  --train

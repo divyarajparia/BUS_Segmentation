@@ -1,0 +1,35 @@
+==========================================
+SLURM_JOB_ID = 1062753
+SLURM_JOB_NODELIST = a02-01
+TMPDIR = /tmp/SLURM_1062753
+==========================================
+Hello! We start experiment for 2D Image Segmentation!
+You are using "cuda" device.
+STEP1. Load BUSI Test Dataset Loader...
+STEP2. Load MADGNet ...
+Complete loading your pretrained backbone resnest50
+TRAINING
+STEP1. Load BUSI-Combined Train Dataset Loader...
+Traceback (most recent call last):
+  File "IS2D_main.py", line 106, in <module>
+    IS2D_main(args)
+  File "IS2D_main.py", line 36, in IS2D_main
+    experiment.train()
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/BUS_Segmentation/IS2D_Experiment/biomedical_2dimage_segmentation_experiment.py", line 72, in train
+    self.setup_train_loader()
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/BUS_Segmentation/IS2D_Experiment/_IS2Dbase.py", line 81, in setup_train_loader
+    train_dataset = BUSICombinedDataset(self.args.train_dataset_dir, mode='train', transform=train_image_transform, target_transform=train_target_transform)
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/BUS_Segmentation/dataset/BioMedicalDataset/BUSICombinedDataset.py", line 18, in __init__
+    self.frame = pd.read_csv(os.path.join(dataset_dir, '{}_frame.csv'.format(mode)))
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/pandas/io/parsers/readers.py", line 912, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/pandas/io/parsers/readers.py", line 577, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/pandas/io/parsers/readers.py", line 1407, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/pandas/io/parsers/readers.py", line 1679, in _make_engine
+    return mapping[engine](f, **self.options)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/pandas/io/parsers/c_parser_wrapper.py", line 93, in __init__
+    self._reader = parsers.TextReader(src, **kwds)
+  File "pandas/_libs/parsers.pyx", line 557, in pandas._libs.parsers.TextReader.__cinit__
+pandas.errors.EmptyDataError: No columns to parse from file
