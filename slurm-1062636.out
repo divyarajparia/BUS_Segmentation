@@ -1,0 +1,13 @@
+==========================================
+SLURM_JOB_ID = 1062636
+SLURM_JOB_NODELIST = a02-01
+TMPDIR = /tmp/SLURM_1062636
+==========================================
+Traceback (most recent call last):
+  File "IS2D_main.py", line 12, in <module>
+    from IS2D_Experiment.biomedical_2dimage_segmentation_experiment import BMISegmentationExperiment
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/BUS_Segmentation/IS2D_Experiment/biomedical_2dimage_segmentation_experiment.py", line 6, in <module>
+    from ._IS2Dbase import BaseSegmentationExperiment
+  File "/project/ruishanl_1185/Tumor_Segmentation_Summer2025_XWDR/Divya/BUS_Segmentation/IS2D_Experiment/_IS2Dbase.py", line 19, in <module>
+    from dataset.BioMedicalDataset.BUSICombinedDataset import *
+ModuleNotFoundError: No module named 'dataset.BioMedicalDataset.BUSICombinedDataset'
