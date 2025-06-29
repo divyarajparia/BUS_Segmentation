@@ -119,12 +119,12 @@ def create_combined_dataset(busi_dir, style_transferred_dir, output_dir):
                     dst_img = os.path.join(output_dir, class_name, 'images', f"style_{img_file}")
                     shutil.copy2(src_img, dst_img)
                     
-                    # Copy mask
+                    # Copy mask (prefix with 'style_' to match image)
                     src_mask = os.path.join(style_mask_dir, img_file)
                     if os.path.exists(src_mask):
-                        dst_mask = os.path.join(output_dir, class_name, 'masks', img_file)
+                        dst_mask = os.path.join(output_dir, class_name, 'masks', f"style_{img_file}")
                         shutil.copy2(src_mask, dst_mask)
-    
+
     print(f"Combined dataset created at {output_dir}")
 
 def create_combined_csv(output_dir):
@@ -146,8 +146,7 @@ def create_combined_csv(output_dir):
                 
                 # Handle BUSI mask naming convention
                 if img_file.startswith('busi_'):
-                    mask_file = img_file.replace('busi_', '').replace('.jpg', '_mask.png').replace('.png', '_mask.png')
-                
+                    mask_file = img_file.replace('.jpg', '_mask.png').replace('.png', '_mask.png')
                 mask_path = os.path.join(mask_dir, mask_file)
                 if os.path.exists(mask_path):
                     all_pairs.append({
