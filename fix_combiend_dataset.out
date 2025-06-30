@@ -1,0 +1,57 @@
+==========================================
+SLURM_JOB_ID = 1080041
+SLURM_JOB_NODELIST = a03-06
+TMPDIR = /tmp/SLURM_1080041
+==========================================
+🔧 Fixing BUSI-Combined dataset at: dataset/BioMedicalDataset/BUSI-Combined
+📊 Found 647 original BUSI samples
+📊 Found 264 style-transferred samples
+
+📈 Original BUSI breakdown:
+  - benign: 437 samples
+  - malignant: 210 samples
+
+📈 Style-transferred breakdown:
+  - benign: 174 samples
+  - malignant: 90 samples
+
+🎯 NEW SPLIT BREAKDOWN:
+
+TRAIN: 716 total samples
+  📁 Original BUSI: 452
+  🎨 Style-transferred: 264
+  📊 Class breakdown:
+    - malignant: 226
+    - benign: 490
+
+TEST: 129 total samples
+  📁 Original BUSI: 129
+  🎨 Style-transferred: 0
+  📊 Class breakdown:
+    - malignant: 51
+    - benign: 78
+
+VAL: 66 total samples
+  📁 Original BUSI: 66
+  🎨 Style-transferred: 0
+  📊 Class breakdown:
+    - malignant: 23
+    - benign: 43
+
+✅ FIXED! PROPER EXPERIMENTAL SETUP ACHIEVED:
+  🏋️ Training: Original BUSI + Style-transferred (augmented data)
+  🧪 Testing: ONLY original BUSI (clean evaluation)
+  🔬 Validation: ONLY original BUSI (clean evaluation)
+
+📄 Updated CSV files saved in: dataset/BioMedicalDataset/BUSI-Combined
+
+🔍 VERIFICATION:
+  train: 716 samples (452 BUSI + 264 style)
+    ✅ GOOD: train contains both BUSI and style-transferred samples
+  test: 129 samples (129 BUSI + 0 style)
+    ✅ GOOD: test contains only original BUSI samples
+  val: 66 samples (66 BUSI + 0 style)
+    ✅ GOOD: val contains only original BUSI samples
+
+🎉 BUSI-Combined dataset fixed successfully!
+   Now ready for fair comparison with synthetic generation approach!

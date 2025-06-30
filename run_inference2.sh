@@ -6,4 +6,10 @@
 #SBATCH --mem=32G
 #SBATCH --time=3:00:00
 
-python apply_style_transfer.py
+# python simple_diffusion_busi.py \
+#     --data_dir dataset/BioMedicalDataset/BUSI \
+#     --mode train \
+#     --num_epochs 50 \
+#     --batch_size 8
+
+python fix_busi_combined.py
