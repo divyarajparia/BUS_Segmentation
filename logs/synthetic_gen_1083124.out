@@ -1,0 +1,25 @@
+==========================================
+SLURM_JOB_ID = 1083124
+SLURM_JOB_NODELIST = e21-01
+TMPDIR = /tmp/SLURM_1083124
+==========================================
+no change     /apps/conda/miniforge3/24.11.3/condabin/conda
+no change     /apps/conda/miniforge3/24.11.3/bin/conda
+no change     /apps/conda/miniforge3/24.11.3/bin/conda-env
+no change     /apps/conda/miniforge3/24.11.3/bin/activate
+no change     /apps/conda/miniforge3/24.11.3/bin/deactivate
+no change     /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.sh
+no change     /apps/conda/miniforge3/24.11.3/etc/fish/conf.d/conda.fish
+no change     /apps/conda/miniforge3/24.11.3/shell/condabin/Conda.psm1
+no change     /apps/conda/miniforge3/24.11.3/shell/condabin/conda-hook.ps1
+no change     /apps/conda/miniforge3/24.11.3/lib/python3.12/site-packages/xontrib/conda.xsh
+no change     /apps/conda/miniforge3/24.11.3/etc/profile.d/conda.csh
+no change     /home1/dr_272/.bashrc
+No action taken.
+🎨 Starting Synthetic BUSI Generation
+📊 Target: Match style-transferred sample count (264 total)
+🎯 Breakdown: 175 benign + 89 malignant
+⏰ Started at: Mon Jun 30 12:43:06 PDT 2025
+✅ Synthetic generation completed at: Mon Jun 30 12:43:06 PDT 2025
+📁 Synthetic images saved in: dataset/BioMedicalDataset/BUSI-Synthetic/
+📊 Generated: 175 benign + 89 malignant = 264 total samples

@@ -12,4 +12,10 @@
 #     --num_epochs 50 \
 #     --batch_size 8
 
-python fix_busi_combined.py
+python simple_diffusion_busi.py \
+    --checkpoint diffusion_model_epoch_50.pth \
+    --mode generate \
+    --output_dir dataset/BioMedicalDataset/BUSI-Synthetic \
+    --num_benign 175 \
+    --num_malignant 89 \
+    # --device cuda

@@ -40,7 +40,7 @@ python IS2D_main.py \
     --save_path model_weights \
     --train_data_type BUSI-Synthetic-Combined \
     --test_data_type BUSI \
-    --final_epoch 200 \
+    --final_epoch 100 \
     --train
 
 echo "✅ Training completed at: $(date)"
