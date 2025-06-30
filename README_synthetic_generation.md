@@ -156,6 +156,70 @@ Diffusion:
 - **Storage**: 100GB+ for datasets and checkpoints
 - **Training Time**: 2-4 days on modern GPU
 
+## Quick Start Guide
+
+### 1. Simple Diffusion (Recommended for Beginners)
+```bash
+# Train simple diffusion model
+python simple_diffusion_busi.py \
+    --data_dir dataset/BioMedicalDataset/BUSI \
+    --mode train \
+    --num_epochs 50 \
+    --batch_size 8
+
+# Generate 10 benign, 100 malignant samples
+python simple_diffusion_busi.py \
+    --mode generate \
+    --checkpoint diffusion_model_epoch_50.pth \
+    --output_dir ./synthetic_custom \
+    --num_benign 10 \
+    --num_malignant 100
+```
+
+### 2. Advanced MedSegDiff-V2 (For Better Quality)
+```bash
+# Train MedSegDiff-V2
+python synthetic_generation_medsegdiff.py \
+    --data_dir dataset/BioMedicalDataset/BUSI \
+    --mode train \
+    --num_epochs 100 \
+    --batch_size 4
+
+# Generate samples (implementation in progress)
+python synthetic_generation_medsegdiff.py \
+    --mode generate \
+    --checkpoint medsegdiff_v2_epoch_100.pth \
+    --num_benign 200 \
+    --num_malignant 200
+```
+
+## Flexible Generation Control
+
+Once trained, you can generate **any combination** of samples:
+
+```bash
+# Balance your dataset: Generate 175 more malignant to match 330 benign
+python simple_diffusion_busi.py \
+    --mode generate \
+    --checkpoint diffusion_model_epoch_50.pth \
+    --num_benign 0 \
+    --num_malignant 175
+
+# Create massive dataset: 1000 of each class
+python simple_diffusion_busi.py \
+    --mode generate \
+    --checkpoint diffusion_model_epoch_50.pth \
+    --num_benign 1000 \
+    --num_malignant 1000
+
+# Research ratios: Test different class balances
+python simple_diffusion_busi.py \
+    --mode generate \
+    --checkpoint diffusion_model_epoch_50.pth \
+    --num_benign 100 \
+    --num_malignant 500  # 5:1 malignant:benign
+```
+
 ## Quality Validation
 
 ### Automated Metrics:
@@ -179,11 +243,11 @@ Diffusion:
 ### Week 1: Setup and Preparation
 - [ ] Install dependencies and set up environment
 - [ ] Prepare and analyze BUSI dataset
-- [ ] Implement MedSegDiff-V2 architecture
+- [ ] Implement diffusion architecture
 - [ ] Set up training pipeline
 
 ### Week 2: Model Training
-- [ ] Train MedSegDiff-V2 on BUSI dataset
+- [ ] Train diffusion model on BUSI dataset
 - [ ] Monitor training metrics and quality
 - [ ] Perform hyperparameter tuning
 - [ ] Validate model convergence
@@ -217,6 +281,22 @@ Diffusion:
 2. **Overfitting**: Apply stronger regularization, data validation
 3. **Performance Drop**: Check synthetic data quality, class balance
 
+## File Structure
+
+```
+BUS_Segmentation/
+├── simple_diffusion_busi.py           # Ready-to-use simple diffusion
+├── synthetic_generation_medsegdiff.py # Advanced MedSegDiff-V2
+├── README_synthetic_generation.md     # This comprehensive guide
+├── dataset/BioMedicalDataset/BUSI/    # Your original data
+├── diffusion_model_epoch_*.pth        # Trained model checkpoints
+└── synthetic_busi/                    # Generated synthetic data
+    ├── benign/
+    │   └── synthetic_benign_*.png
+    └── malignant/
+        └── synthetic_malignant_*.png
+```
+
 ## Resources and References
 
 ### Key Papers:
@@ -237,7 +317,7 @@ Diffusion:
 
 ## Next Steps
 
-1. **Start with MedSegDiff-V2**: Most promising approach based on literature
+1. **Start with Simple Diffusion**: Use `simple_diffusion_busi.py` for immediate results
 2. **Validate on Small Scale**: Test with 100 synthetic images first
 3. **Scale Gradually**: Increase to 1000+ samples per class
 4. **Continuous Evaluation**: Monitor quality and performance metrics
