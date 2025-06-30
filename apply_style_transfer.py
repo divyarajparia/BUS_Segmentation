@@ -54,7 +54,8 @@ class StyleTransferApplier:
                 
                 # Load and transform image
                 img = Image.open(img_path).convert('L')
-                img_tensor = transform(img).unsqueeze(0).to(self.device)
+                img_tensor = transform(img)
+                img_tensor = img_tensor.unsqueeze(0).to(self.device)
                 
                 # Apply style transfer
                 with torch.no_grad():
@@ -114,17 +115,20 @@ def create_combined_dataset(busi_dir, style_transferred_dir, output_dir):
         if os.path.exists(style_img_dir):
             for img_file in os.listdir(style_img_dir):
                 if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    # Always use the original class_name as the subfolder
+                    subfolder = class_name
+
                     # Copy image
                     src_img = os.path.join(style_img_dir, img_file)
-                    dst_img = os.path.join(output_dir, class_name, 'images', f"style_{img_file}")
+                    dst_img = os.path.join(output_dir, subfolder, 'images', f"style_{img_file}")
                     shutil.copy2(src_img, dst_img)
                     
                     # Copy mask (prefix with 'style_' to match image)
                     src_mask = os.path.join(style_mask_dir, img_file)
                     if os.path.exists(src_mask):
-                        dst_mask = os.path.join(output_dir, class_name, 'masks', f"style_{img_file}")
+                        dst_mask = os.path.join(output_dir, subfolder, 'masks', f"style_{img_file}")
                         shutil.copy2(src_mask, dst_mask)
-
+    
     print(f"Combined dataset created at {output_dir}")
 
 def create_combined_csv(output_dir):
@@ -142,17 +146,26 @@ def create_combined_csv(output_dir):
             
         for img_file in os.listdir(img_dir):
             if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                mask_file = img_file
-                
-                # Handle BUSI mask naming convention
-                if img_file.startswith('busi_'):
-                    mask_file = img_file.replace('.jpg', '_mask.png').replace('.png', '_mask.png')
-                mask_path = os.path.join(mask_dir, mask_file)
-                if os.path.exists(mask_path):
-                    all_pairs.append({
-                        'image_path': f"{class_name} {img_file}",
-                        'mask_path': f"{class_name} {mask_file}"
-                    })
+                # For BUSI and style-transferred images, do not add class prefix
+                if img_file.startswith('busi_') or img_file.startswith('style_'):
+                    if img_file.startswith('busi_'):
+                        mask_file = img_file.replace('.jpg', '_mask.png').replace('.png', '_mask.png')
+                    else:
+                        mask_file = img_file
+                    mask_path = os.path.join(mask_dir, mask_file)
+                    if os.path.exists(mask_path):
+                        all_pairs.append({
+                            'image_path': img_file,
+                            'mask_path': mask_file
+                        })
+                else:
+                    # For any other images, keep the class prefix (if needed)
+                    mask_path = os.path.join(mask_dir, img_file)
+                    if os.path.exists(mask_path):
+                        all_pairs.append({
+                            'image_path': f"{class_name} {img_file}",
+                            'mask_path': f"{class_name} {img_file}"
+                        })
     
     # Shuffle and split
     np.random.shuffle(all_pairs)
@@ -185,7 +198,7 @@ def main():
     
     # Step 1: Apply style transfer to BUS-UCLM
     print("Step 1: Applying style transfer to BUS-UCLM images...")
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     applier = StyleTransferApplier(style_transfer_model_path, device)
     applier.apply_style_transfer(bus_uclm_dir, style_transferred_dir)
     

@@ -6,4 +6,4 @@
 #SBATCH --mem=32G
 #SBATCH --time=3:00:00
 
-python3 apply_style_transfer.py
+python apply_style_transfer.py
