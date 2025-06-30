@@ -101,7 +101,7 @@ if __name__=='__main__' :
 
     # Combined dataset test
     if args.train_data_type == 'BUSI-Combined':
-        for test_data_type in ['BUSI', 'BUS-UCLM']:
+        for test_data_type in ['BUSI']:
             args.test_data_type = test_data_type
             IS2D_main(args)
 
