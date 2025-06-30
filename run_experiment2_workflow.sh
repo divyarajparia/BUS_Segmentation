@@ -6,8 +6,9 @@
 echo "🎯 EXPERIMENT 2: BUSI + Synthetic BUSI Workflow"
 echo "==============================================="
 
-# Step 1: Generate synthetic images
+# Step 1: Generate synthetic images (using pre-trained diffusion model)
 echo "📊 Step 1: Generating synthetic BUSI images..."
+echo "✅ Using pre-trained diffusion model (50 epochs completed)"
 echo "Target: 264 samples (175 benign + 89 malignant) to match style-transferred count"
 
 sbatch run_synthetic_generation.job
@@ -51,4 +52,4 @@ echo "To monitor progress:"
 echo "  squeue -u $USER"
 echo "  tail -f logs/busi_synthetic_*.out"
 echo ""
-echo "Expected completion: ~6-8 hours for training" 
+echo "Expected completion: ~10-12 hours total (4h generation + 8h training)" 

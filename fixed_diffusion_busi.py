@@ -1,25 +1,23 @@
 """
-Simplified Diffusion Model for BUSI Synthetic Generation
-======================================================
+FIXED Diffusion Model for BUSI Dataset
+=====================================
 
-A starter implementation for generating synthetic BUSI images using diffusion models.
-This is a simplified version to get you started quickly.
-
-Usage:
-    python simple_diffusion_busi.py --data_dir /path/to/busi --mode train
-    python simple_diffusion_busi.py --checkpoint /path/to/model.pth --mode generate
+This version fixes:
+1. Image normalization issues (black images)
+2. Missing mask generation
+3. Proper output constraints
 """
 
+import os
+import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 from PIL import Image
-import os
 import numpy as np
 from tqdm import tqdm
-import argparse
 
 class BUSIDataset(Dataset):
     """BUSI dataset loader that works with CSV files"""
@@ -38,7 +36,8 @@ class BUSIDataset(Dataset):
             df = pd.read_csv(csv_path)
             
             for _, row in df.iterrows():
-                image_path = str(row['image_path'])  # Convert to string
+                image_path = str(row['image_path'])
+                mask_path = str(row['mask_path'])
                 
                 # Determine class from filename
                 if image_path.startswith('benign'):
@@ -46,43 +45,55 @@ class BUSIDataset(Dataset):
                 elif image_path.startswith('malignant'):
                     class_name = 'malignant'
                 else:
-                    continue  # Skip if we can't determine class
+                    continue
                 
-                # Check different possible locations for images
-                possible_paths = [
-                    os.path.join(data_dir, image_path),  # Direct path
-                    os.path.join(data_dir, 'image', image_path),  # In image folder
-                    os.path.join(data_dir, class_name, 'image', image_path),  # In class/image folder
-                    os.path.join(data_dir, class_name, image_path),  # In class folder
+                # Check for image existence
+                possible_image_paths = [
+                    os.path.join(data_dir, image_path),
+                    os.path.join(data_dir, 'image', image_path),
+                    os.path.join(data_dir, class_name, 'image', image_path),
+                    os.path.join(data_dir, class_name, image_path),
                 ]
                 
-                # Find the actual image path
-                actual_path = None
-                for path in possible_paths:
+                # Check for mask existence
+                possible_mask_paths = [
+                    os.path.join(data_dir, mask_path),
+                    os.path.join(data_dir, 'mask', mask_path),
+                    os.path.join(data_dir, class_name, 'mask', mask_path),
+                    os.path.join(data_dir, class_name, mask_path),
+                ]
+                
+                actual_image_path = None
+                actual_mask_path = None
+                
+                for path in possible_image_paths:
                     if os.path.exists(path):
-                        actual_path = path
+                        actual_image_path = path
+                        break
+                        
+                for path in possible_mask_paths:
+                    if os.path.exists(path):
+                        actual_mask_path = path
                         break
                 
-                if actual_path:
+                if actual_image_path and actual_mask_path:
                     self.samples.append({
-                        'path': actual_path,
+                        'image_path': actual_image_path,
+                        'mask_path': actual_mask_path,
                         'class': self.class_to_idx[class_name]
                     })
         
         print(f"Loaded {len(self.samples)} samples from {split} split")
         
-        if len(self.samples) == 0:
-            print(f"WARNING: No samples found in {csv_path}")
-            print(f"Please check that images exist in one of these locations:")
-            print(f"  - {data_dir}/[image_name].png")
-            print(f"  - {data_dir}/image/[image_name].png") 
-            print(f"  - {data_dir}/benign/image/[image_name].png")
-            print(f"  - {data_dir}/malignant/image/[image_name].png")
-        
         self.transform = transforms.Compose([
             transforms.Resize((img_size, img_size)),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5])  # Normalize to [-1, 1]
+        ])
+        
+        self.mask_transform = transforms.Compose([
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
         ])
     
     def __len__(self):
@@ -90,14 +101,23 @@ class BUSIDataset(Dataset):
     
     def __getitem__(self, idx):
         sample = self.samples[idx]
-        image = Image.open(sample['path']).convert('L')
+        
+        # Load image
+        image = Image.open(sample['image_path']).convert('L')
         image = self.transform(image)
-        return image, sample['class']
+        
+        # Load mask
+        mask = Image.open(sample['mask_path']).convert('L')
+        mask = self.mask_transform(mask)
+        # Binarize mask
+        mask = (mask > 0.5).float()
+        
+        return image, mask, sample['class']
 
-class SimpleUNet(nn.Module):
-    """Simplified U-Net for diffusion denoising"""
+class FixedUNet(nn.Module):
+    """FIXED U-Net with proper output constraints"""
     
-    def __init__(self, in_channels=1, out_channels=1, time_dim=256, num_classes=2):
+    def __init__(self, in_channels=2, out_channels=2, time_dim=256, num_classes=2):  # 2 channels: image + mask
         super().__init__()
         
         # Time embedding
@@ -125,7 +145,7 @@ class SimpleUNet(nn.Module):
         self.dec2 = self.conv_block(256 + 128, 128)
         self.dec1 = self.conv_block(128 + 64, 64)
         
-        # Output
+        # Output layers
         self.out_conv = nn.Conv2d(64, out_channels, 1)
         
         # Time conditioning layers
@@ -187,7 +207,13 @@ class SimpleUNet(nn.Module):
         d1 = F.interpolate(d2, scale_factor=2, mode='bilinear', align_corners=False)
         d1 = self.dec1(torch.cat([d1, e1], dim=1))
         
-        return self.out_conv(d1)
+        output = self.out_conv(d1)
+        
+        # CRITICAL FIX: Constrain outputs to [-1, 1] for images and [0, 1] for masks
+        image_output = torch.tanh(output[:, :1, :, :])  # Image channel: [-1, 1]
+        mask_output = torch.sigmoid(output[:, 1:, :, :])  # Mask channel: [0, 1]
+        
+        return torch.cat([image_output, mask_output], dim=1)
     
     def get_time_embedding(self, timesteps, embedding_dim):
         """Sinusoidal time embeddings"""
@@ -198,8 +224,8 @@ class SimpleUNet(nn.Module):
         emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1)
         return emb
 
-class SimpleDiffusion:
-    """Simplified diffusion process"""
+class FixedDiffusion:
+    """Fixed diffusion process for image + mask generation"""
     
     def __init__(self, num_timesteps=1000, beta_start=0.0001, beta_end=0.02, device='cuda'):
         self.num_timesteps = num_timesteps
@@ -215,7 +241,7 @@ class SimpleDiffusion:
         self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - self.alphas_cumprod).to(device)
     
     def q_sample(self, x_start, t, noise=None):
-        """Add noise to images"""
+        """Add noise to image+mask pairs"""
         if noise is None:
             noise = torch.randn_like(x_start)
         
@@ -233,7 +259,7 @@ class SimpleDiffusion:
     
     @torch.no_grad()
     def sample(self, model, shape, class_labels=None, device='cuda'):
-        """Generate samples"""
+        """Generate image+mask samples"""
         x = torch.randn(shape, device=device)
         
         for i in tqdm(reversed(range(self.num_timesteps)), desc='Sampling'):
@@ -258,34 +284,38 @@ class SimpleDiffusion:
         
         return x
 
-def train_model(data_dir, num_epochs=50, batch_size=8, lr=1e-4, device='cuda'):
-    """Train the diffusion model"""
+def train_fixed_model(data_dir, num_epochs=50, batch_size=8, lr=1e-4, device='cuda'):
+    """Train the FIXED diffusion model"""
     
     # Dataset and dataloader
     dataset = BUSIDataset(data_dir)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     
     # Model and diffusion
-    model = SimpleUNet().to(device)
-    diffusion = SimpleDiffusion(device=device)
+    model = FixedUNet().to(device)
+    diffusion = FixedDiffusion(device=device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     
-    print(f"Training on {len(dataset)} samples")
+    print(f"Training FIXED model on {len(dataset)} samples")
     
     for epoch in range(num_epochs):
         total_loss = 0
         num_batches = 0
         
         pbar = tqdm(dataloader, desc=f'Epoch {epoch+1}/{num_epochs}')
-        for batch_idx, (images, class_labels) in enumerate(pbar):
+        for batch_idx, (images, masks, class_labels) in enumerate(pbar):
             images = images.to(device)
+            masks = masks.to(device)
             class_labels = class_labels.to(device)
+            
+            # Combine image and mask
+            x_start = torch.cat([images, masks], dim=1)  # Shape: [B, 2, H, W]
             
             # Random timesteps
             t = torch.randint(0, diffusion.num_timesteps, (images.shape[0],), device=device)
             
             # Calculate loss
-            loss = diffusion.p_losses(model, images, t, class_labels)
+            loss = diffusion.p_losses(model, x_start, t, class_labels)
             
             optimizer.zero_grad()
             loss.backward()
@@ -306,35 +336,37 @@ def train_model(data_dir, num_epochs=50, batch_size=8, lr=1e-4, device='cuda'):
                 'optimizer_state_dict': optimizer.state_dict(),
                 'epoch': epoch + 1,
                 'loss': avg_loss,
-            }, f'diffusion_model_epoch_{epoch+1}.pth')
+            }, f'fixed_diffusion_model_epoch_{epoch+1}.pth')
 
-def generate_synthetic_images(checkpoint_path, output_dir, num_benign=100, num_malignant=100, device='cuda'):
-    """Generate synthetic images with flexible class control"""
+def generate_fixed_synthetic_data(checkpoint_path, output_dir, num_benign=100, num_malignant=100, device='cuda'):
+    """Generate BOTH images AND masks with FIXED normalization"""
     
     # Load model
-    model = SimpleUNet().to(device)
+    model = FixedUNet().to(device)
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
-    diffusion = SimpleDiffusion(device=device)
+    diffusion = FixedDiffusion(device=device)
     
     os.makedirs(output_dir, exist_ok=True)
     
-    # Generate for each class with custom counts
+    # Generate for each class
     class_counts = {'benign': num_benign, 'malignant': num_malignant}
     
     for class_idx, class_name in enumerate(['benign', 'malignant']):
         num_samples = class_counts[class_name]
         
         if num_samples == 0:
-            print(f'Skipping {class_name} (0 samples requested)')
             continue
             
-        class_dir = os.path.join(output_dir, class_name)
-        os.makedirs(class_dir, exist_ok=True)
+        # Create directories
+        image_dir = os.path.join(output_dir, class_name, 'image')
+        mask_dir = os.path.join(output_dir, class_name, 'mask')
+        os.makedirs(image_dir, exist_ok=True)
+        os.makedirs(mask_dir, exist_ok=True)
         
-        print(f'Generating {num_samples} {class_name} samples...')
+        print(f'Generating {num_samples} {class_name} samples (images + masks)...')
         
         # Generate in batches
         batch_size = 8
@@ -347,52 +379,51 @@ def generate_synthetic_images(checkpoint_path, output_dir, num_benign=100, num_m
             # Class labels
             class_labels = torch.full((current_batch_size,), class_idx, device=device)
             
-            # Generate samples
+            # Generate samples (2 channels: image + mask)
             samples = diffusion.sample(
                 model, 
-                (current_batch_size, 1, 256, 256), 
+                (current_batch_size, 2, 256, 256), 
                 class_labels, 
                 device
             )
             
-            # Save images with FIXED normalization
+            # Save images and masks
             for i in range(current_batch_size):
-                sample = samples[i].cpu().numpy()[0]
+                # Extract image and mask
+                image_tensor = samples[i, 0:1, :, :]  # First channel
+                mask_tensor = samples[i, 1:2, :, :]   # Second channel
                 
-                # FIXED NORMALIZATION - Method 2: Clamp then normalize
-                sample_clamped = np.clip(sample, -1, 1)
-                img_array = ((sample_clamped + 1) * 127.5).astype(np.uint8)
+                # Convert image (from [-1, 1] to [0, 255])
+                image_array = ((image_tensor.cpu().numpy()[0] + 1) * 127.5).astype(np.uint8)
+                image_pil = Image.fromarray(image_array, mode='L')
                 
-                # If still black, try min-max normalization as fallback
-                if img_array.max() == img_array.min():
-                    if sample.max() != sample.min():
-                        img_array = ((sample - sample.min()) / (sample.max() - sample.min()) * 255).astype(np.uint8)
-                    else:
-                        print(f"WARNING: Generated completely flat image for {class_name}_{sample_count}")
-                        continue
+                # Convert mask (from [0, 1] to [0, 255])
+                mask_array = (mask_tensor.cpu().numpy()[0] * 255).astype(np.uint8)
+                mask_pil = Image.fromarray(mask_array, mode='L')
                 
-                img_pil = Image.fromarray(img_array, mode='L')
+                # Save files
+                image_filename = f'synthetic_{class_name}_{sample_count:04d}.png'
+                mask_filename = f'synthetic_{class_name}_{sample_count:04d}_mask.png'
                 
-                # Save
-                filename = f'synthetic_{class_name}_{sample_count:04d}.png'
-                img_pil.save(os.path.join(class_dir, filename))
+                image_pil.save(os.path.join(image_dir, image_filename))
+                mask_pil.save(os.path.join(mask_dir, mask_filename))
+                
                 sample_count += 1
         
-        print(f'Saved {num_samples} {class_name} samples to {class_dir}')
+        print(f'Saved {num_samples} {class_name} samples (images + masks)')
     
-    print(f'Total generated: {num_benign} benign + {num_malignant} malignant = {num_benign + num_malignant} samples')
+    print(f'Total generated: {num_benign} benign + {num_malignant} malignant = {num_benign + num_malignant} image-mask pairs')
 
 def main():
-    parser = argparse.ArgumentParser(description='Simple Diffusion for BUSI')
+    parser = argparse.ArgumentParser(description='FIXED Diffusion for BUSI')
     parser.add_argument('--data_dir', type=str, help='Path to BUSI dataset')
     parser.add_argument('--mode', type=str, choices=['train', 'generate'], default='train')
     parser.add_argument('--checkpoint', type=str, help='Path to checkpoint for generation')
-    parser.add_argument('--output_dir', type=str, default='./synthetic_busi', help='Output directory')
+    parser.add_argument('--output_dir', type=str, default='./fixed_synthetic_busi', help='Output directory')
     parser.add_argument('--num_epochs', type=int, default=50, help='Number of training epochs')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
-    parser.add_argument('--num_samples', type=int, default=100, help='Number of samples per class (legacy)')
-    parser.add_argument('--num_benign', type=int, default=None, help='Number of benign samples to generate')
-    parser.add_argument('--num_malignant', type=int, default=None, help='Number of malignant samples to generate')
+    parser.add_argument('--num_benign', type=int, default=175, help='Number of benign samples to generate')
+    parser.add_argument('--num_malignant', type=int, default=89, help='Number of malignant samples to generate')
     
     args = parser.parse_args()
     
@@ -402,17 +433,12 @@ def main():
     if args.mode == 'train':
         if not args.data_dir:
             raise ValueError('data_dir required for training')
-        train_model(args.data_dir, args.num_epochs, args.batch_size, device=str(device))
+        train_fixed_model(args.data_dir, args.num_epochs, args.batch_size, device=str(device))
     
     elif args.mode == 'generate':
         if not args.checkpoint:
             raise ValueError('checkpoint required for generation')
-        
-        # Handle flexible generation counts
-        num_benign = args.num_benign if args.num_benign is not None else args.num_samples
-        num_malignant = args.num_malignant if args.num_malignant is not None else args.num_samples
-        
-        generate_synthetic_images(args.checkpoint, args.output_dir, num_benign, num_malignant, str(device))
+        generate_fixed_synthetic_data(args.checkpoint, args.output_dir, args.num_benign, args.num_malignant, str(device))
 
 if __name__ == '__main__':
     main() 

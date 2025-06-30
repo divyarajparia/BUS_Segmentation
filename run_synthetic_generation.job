@@ -33,14 +33,8 @@ echo "📊 Target: Match style-transferred sample count (264 total)"
 echo "🎯 Breakdown: 175 benign + 89 malignant"
 echo "⏰ Started at: $(date)"
 
-# Generate synthetic images using trained diffusion model
-python simple_diffusion_busi.py \
-    --checkpoint model_weights/diffusion_busi_epoch_*.pth \
-    --mode generate \
-    --output_dir dataset/BioMedicalDataset/BUSI-Synthetic \
-    --num_benign 175 \
-    --num_malignant 89 \
-    --device cuda
+# Generate synthetic images using FIXED generation script
+python quick_fix_generation.py
 
 echo "✅ Synthetic generation completed at: $(date)"
 echo "📁 Synthetic images saved in: dataset/BioMedicalDataset/BUSI-Synthetic/"

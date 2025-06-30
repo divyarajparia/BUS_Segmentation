@@ -1,0 +1,45 @@
+#!/bin/bash
+
+#SBATCH --account=ruishanl_1185
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gpus-per-task=1
+#SBATCH --mem=20G
+#SBATCH --time=12:00:00
+#SBATCH --job-name=diffusion_train
+#SBATCH --output=logs/diffusion_train_%j.out
+#SBATCH --error=logs/diffusion_train_%j.err
+
+# Load modules
+module purge
+module load gcc/13.3.0
+module load cudnn/8.9.7.29-12-cuda
+module load openmpi/5.0.5
+module load cuda/12.6.3
+module load conda
+
+# Activate conda environment
+conda init
+source ~/.bashrc
+conda activate madgnet_env_gpu
+
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+echo "🎨 Starting Diffusion Model Training on BUSI"
+echo "📊 Training on: BUSI train set (485 samples)"
+echo "🎯 Epochs: 200 (for high quality generation)"
+echo "⏰ Started at: $(date)"
+
+# Train diffusion model
+python simple_diffusion_busi.py \
+    --mode train \
+    --data_dir dataset/BioMedicalDataset/BUSI \
+    --num_epochs 200 \
+    --batch_size 8
+
+echo "✅ Diffusion training completed at: $(date)"
+echo "📁 Model checkpoints saved as: diffusion_model_epoch_*.pth"
+echo "🎨 Ready for synthetic generation!" 
