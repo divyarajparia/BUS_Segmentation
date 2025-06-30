@@ -22,24 +22,62 @@ from tqdm import tqdm
 import argparse
 
 class BUSIDataset(Dataset):
-    """Simple BUSI dataset loader"""
+    """BUSI dataset loader that works with CSV files"""
     
-    def __init__(self, data_dir, img_size=256):
+    def __init__(self, data_dir, img_size=256, split='train'):
         self.data_dir = data_dir
         self.img_size = img_size
         self.samples = []
         self.class_to_idx = {'benign': 0, 'malignant': 1}
         
-        # Load samples
-        for class_name in ['benign', 'malignant']:
-            class_dir = os.path.join(data_dir, class_name, 'images')
-            if os.path.exists(class_dir):
-                for img_file in os.listdir(class_dir):
-                    if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        self.samples.append({
-                            'path': os.path.join(class_dir, img_file),
-                            'class': self.class_to_idx[class_name]
-                        })
+        # Load samples from CSV
+        import pandas as pd
+        csv_path = os.path.join(data_dir, f'{split}_frame.csv')
+        
+        if os.path.exists(csv_path):
+            df = pd.read_csv(csv_path)
+            
+            for _, row in df.iterrows():
+                image_path = str(row['image_path'])  # Convert to string
+                
+                # Determine class from filename
+                if image_path.startswith('benign'):
+                    class_name = 'benign'
+                elif image_path.startswith('malignant'):
+                    class_name = 'malignant'
+                else:
+                    continue  # Skip if we can't determine class
+                
+                # Check different possible locations for images
+                possible_paths = [
+                    os.path.join(data_dir, image_path),  # Direct path
+                    os.path.join(data_dir, 'image', image_path),  # In image folder
+                    os.path.join(data_dir, class_name, 'image', image_path),  # In class/image folder
+                    os.path.join(data_dir, class_name, image_path),  # In class folder
+                ]
+                
+                # Find the actual image path
+                actual_path = None
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        actual_path = path
+                        break
+                
+                if actual_path:
+                    self.samples.append({
+                        'path': actual_path,
+                        'class': self.class_to_idx[class_name]
+                    })
+        
+        print(f"Loaded {len(self.samples)} samples from {split} split")
+        
+        if len(self.samples) == 0:
+            print(f"WARNING: No samples found in {csv_path}")
+            print(f"Please check that images exist in one of these locations:")
+            print(f"  - {data_dir}/[image_name].png")
+            print(f"  - {data_dir}/image/[image_name].png") 
+            print(f"  - {data_dir}/benign/image/[image_name].png")
+            print(f"  - {data_dir}/malignant/image/[image_name].png")
         
         self.transform = transforms.Compose([
             transforms.Resize((img_size, img_size)),
@@ -163,17 +201,18 @@ class SimpleUNet(nn.Module):
 class SimpleDiffusion:
     """Simplified diffusion process"""
     
-    def __init__(self, num_timesteps=1000, beta_start=0.0001, beta_end=0.02):
+    def __init__(self, num_timesteps=1000, beta_start=0.0001, beta_end=0.02, device='cuda'):
         self.num_timesteps = num_timesteps
+        self.device = device
         
         # Linear beta schedule
-        self.betas = torch.linspace(beta_start, beta_end, num_timesteps)
-        self.alphas = 1.0 - self.betas
-        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
+        self.betas = torch.linspace(beta_start, beta_end, num_timesteps).to(device)
+        self.alphas = (1.0 - self.betas).to(device)
+        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0).to(device)
         
         # For sampling
-        self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
-        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - self.alphas_cumprod)
+        self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod).to(device)
+        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - self.alphas_cumprod).to(device)
     
     def q_sample(self, x_start, t, noise=None):
         """Add noise to images"""
@@ -228,7 +267,7 @@ def train_model(data_dir, num_epochs=50, batch_size=8, lr=1e-4, device='cuda'):
     
     # Model and diffusion
     model = SimpleUNet().to(device)
-    diffusion = SimpleDiffusion()
+    diffusion = SimpleDiffusion(device=device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     
     print(f"Training on {len(dataset)} samples")
@@ -278,7 +317,7 @@ def generate_synthetic_images(checkpoint_path, output_dir, num_benign=100, num_m
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
-    diffusion = SimpleDiffusion()
+    diffusion = SimpleDiffusion(device=device)
     
     os.makedirs(output_dir, exist_ok=True)
     
@@ -351,7 +390,7 @@ def main():
     if args.mode == 'train':
         if not args.data_dir:
             raise ValueError('data_dir required for training')
-        train_model(args.data_dir, args.num_epochs, args.batch_size, device=device)
+        train_model(args.data_dir, args.num_epochs, args.batch_size, device=str(device))
     
     elif args.mode == 'generate':
         if not args.checkpoint:
@@ -361,7 +400,7 @@ def main():
         num_benign = args.num_benign if args.num_benign is not None else args.num_samples
         num_malignant = args.num_malignant if args.num_malignant is not None else args.num_samples
         
-        generate_synthetic_images(args.checkpoint, args.output_dir, num_benign, num_malignant, device)
+        generate_synthetic_images(args.checkpoint, args.output_dir, num_benign, num_malignant, str(device))
 
 if __name__ == '__main__':
     main() 

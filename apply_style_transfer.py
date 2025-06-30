@@ -132,10 +132,11 @@ def create_combined_dataset(busi_dir, style_transferred_dir, output_dir):
     print(f"Combined dataset created at {output_dir}")
 
 def create_combined_csv(output_dir):
-    """Create CSV files for the combined dataset"""
+    """Create CSV files for the combined dataset with proper train/test separation"""
     
-    # Collect all image-mask pairs
-    all_pairs = []
+    # Separate original BUSI and style-transferred samples
+    busi_pairs = []
+    style_pairs = []
     
     for class_name in ['benign', 'malignant']:
         img_dir = os.path.join(output_dir, class_name, 'images')
@@ -146,47 +147,69 @@ def create_combined_csv(output_dir):
             
         for img_file in os.listdir(img_dir):
             if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                # For BUSI and style-transferred images, do not add class prefix
-                if img_file.startswith('busi_') or img_file.startswith('style_'):
-                    if img_file.startswith('busi_'):
-                        mask_file = img_file.replace('.jpg', '_mask.png').replace('.png', '_mask.png')
-                    else:
-                        mask_file = img_file
+                if img_file.startswith('busi_'):
+                    # Original BUSI samples
+                    mask_file = img_file.replace('.jpg', '_mask.png').replace('.png', '_mask.png')
                     mask_path = os.path.join(mask_dir, mask_file)
                     if os.path.exists(mask_path):
-                        all_pairs.append({
+                        busi_pairs.append({
                             'image_path': img_file,
                             'mask_path': mask_file
                         })
-                else:
-                    # For any other images, keep the class prefix (if needed)
-                    mask_path = os.path.join(mask_dir, img_file)
+                elif img_file.startswith('style_'):
+                    # Style-transferred samples (only for training)
+                    mask_file = img_file
+                    mask_path = os.path.join(mask_dir, mask_file)
                     if os.path.exists(mask_path):
-                        all_pairs.append({
-                            'image_path': f"{class_name} {img_file}",
-                            'mask_path': f"{class_name} {img_file}"
+                        style_pairs.append({
+                            'image_path': img_file,
+                            'mask_path': mask_file
                         })
     
-    # Shuffle and split
-    np.random.shuffle(all_pairs)
+    print(f"Found {len(busi_pairs)} original BUSI samples")
+    print(f"Found {len(style_pairs)} style-transferred samples")
     
-    # Split into train/test/val (70/20/10)
-    total = len(all_pairs)
-    train_size = int(0.7 * total)
-    test_size = int(0.2 * total)
+    # Shuffle BUSI samples for random split
+    np.random.seed(42)  # For reproducible splits
+    np.random.shuffle(busi_pairs)
     
-    train_pairs = all_pairs[:train_size]
-    test_pairs = all_pairs[train_size:train_size + test_size]
-    val_pairs = all_pairs[train_size + test_size:]
+    # Split BUSI samples into train/test/val (70/20/10)
+    total_busi = len(busi_pairs)
+    busi_train_size = int(0.7 * total_busi)
+    busi_test_size = int(0.2 * total_busi)
+    
+    busi_train = busi_pairs[:busi_train_size]
+    busi_test = busi_pairs[busi_train_size:busi_train_size + busi_test_size]
+    busi_val = busi_pairs[busi_train_size + busi_test_size:]
+    
+    # Combine training data: BUSI train + ALL style-transferred samples
+    # Test/Val data: ONLY original BUSI samples
+    train_pairs = busi_train + style_pairs  # Augmented training set
+    test_pairs = busi_test                  # Pure BUSI test set
+    val_pairs = busi_val                    # Pure BUSI validation set
+    
+    # Shuffle training set (contains both BUSI and style-transferred)
+    np.random.shuffle(train_pairs)
     
     # Save CSV files
     for split_name, pairs in [('train', train_pairs), ('test', test_pairs), ('val', val_pairs)]:
         df = pd.DataFrame(pairs)
         csv_path = os.path.join(output_dir, f'{split_name}_frame.csv')
         df.to_csv(csv_path, index=False)
-        print(f"{split_name}: {len(pairs)} samples")
+        
+        # Count sample types in each split
+        busi_count = len([p for p in pairs if p['image_path'].startswith('busi_')])
+        style_count = len([p for p in pairs if p['image_path'].startswith('style_')])
+        
+        print(f"{split_name}: {len(pairs)} total samples")
+        print(f"  - Original BUSI: {busi_count}")
+        print(f"  - Style-transferred: {style_count}")
     
-    print(f"CSV files created for combined dataset")
+    print(f"\n✅ PROPER EXPERIMENTAL SETUP ACHIEVED:")
+    print(f"  - Training: Original BUSI + Style-transferred (augmented)")
+    print(f"  - Testing: ONLY original BUSI (clean evaluation)")
+    print(f"  - Validation: ONLY original BUSI (clean evaluation)")
+    print(f"CSV files created for combined dataset with proper train/test separation")
 
 def main():
     # Configuration

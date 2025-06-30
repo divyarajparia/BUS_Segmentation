@@ -1,0 +1,48 @@
+#!/bin/bash
+
+#SBATCH --account=ruishanl_1185
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gpus-per-task=2
+#SBATCH --mem=30G
+#SBATCH --time=8:00:00
+#SBATCH --job-name=busi_combined_train
+#SBATCH --output=logs/busi_combined_%j.out
+#SBATCH --error=logs/busi_combined_%j.err
+
+# Load modules
+module purge
+module load gcc/13.3.0
+module load cudnn/8.9.7.29-12-cuda
+module load openmpi/5.0.5
+module load cuda/12.6.3
+module load conda
+
+# Activate conda environment
+conda init
+source ~/.bashrc
+conda activate madgnet_env_gpu
+
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+echo "🚀 Starting Experiment 1: BUSI + Style-transferred BUS-UCLM"
+echo "📊 Training on: BUSI-Combined (Fixed - 762 samples)"
+echo "🧪 Testing on: BUSI (Clean - 142 samples)"
+echo "⏰ Started at: $(date)"
+
+# Train the model
+python IS2D_main.py \
+    --num_workers 4 \
+    --data_path dataset/BioMedicalDataset \
+    --save_path model_weights \
+    --train_data_type BUSI-Combined \
+    --test_data_type BUSI \
+    --final_epoch 200 \
+    --train
+
+echo "✅ Training completed at: $(date)"
+echo "📁 Model saved in: model_weights/BUSI-Combined/"
+echo "📊 Test results saved in: model_weights/BUSI-Combined/test_reports/" 

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+#SBATCH --account=ruishanl_1185
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gpus-per-task=1
+#SBATCH --mem=20G
+#SBATCH --time=6:00:00
+#SBATCH --job-name=synthetic_gen
+#SBATCH --output=logs/synthetic_gen_%j.out
+#SBATCH --error=logs/synthetic_gen_%j.err
+
+# Load modules
+module purge
+module load gcc/13.3.0
+module load cudnn/8.9.7.29-12-cuda
+module load openmpi/5.0.5
+module load cuda/12.6.3
+module load conda
+
+# Activate conda environment
+conda init
+source ~/.bashrc
+conda activate madgnet_env_gpu
+
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+echo "🎨 Starting Synthetic BUSI Generation"
+echo "📊 Target: Match style-transferred sample count (264 total)"
+echo "🎯 Breakdown: 175 benign + 89 malignant"
+echo "⏰ Started at: $(date)"
+
+# Generate synthetic images using trained diffusion model
+python simple_diffusion_busi.py \
+    --checkpoint model_weights/diffusion_busi_epoch_*.pth \
+    --mode generate \
+    --output_dir dataset/BioMedicalDataset/BUSI-Synthetic \
+    --num_benign 175 \
+    --num_malignant 89 \
+    --device cuda
+
+echo "✅ Synthetic generation completed at: $(date)"
+echo "📁 Synthetic images saved in: dataset/BioMedicalDataset/BUSI-Synthetic/"
+echo "📊 Generated: 175 benign + 89 malignant = 264 total samples" 
