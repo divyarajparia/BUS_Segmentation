@@ -222,17 +222,18 @@ class JointDiffusionUNet(nn.Module):
 class JointDiffusion:
     """Joint diffusion process for images and masks"""
     
-    def __init__(self, num_timesteps=1000, beta_start=0.0001, beta_end=0.02):
+    def __init__(self, num_timesteps=1000, beta_start=0.0001, beta_end=0.02, device='cuda'):
         self.num_timesteps = num_timesteps
+        self.device = device
         
-        # Linear beta schedule
-        self.betas = torch.linspace(beta_start, beta_end, num_timesteps)
-        self.alphas = 1.0 - self.betas
-        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0)
+        # Linear beta schedule - MOVE TO DEVICE
+        self.betas = torch.linspace(beta_start, beta_end, num_timesteps).to(device)
+        self.alphas = (1.0 - self.betas).to(device)
+        self.alphas_cumprod = torch.cumprod(self.alphas, dim=0).to(device)
         
-        # For sampling
-        self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
-        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - self.alphas_cumprod)
+        # For sampling - MOVE TO DEVICE
+        self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod).to(device)
+        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - self.alphas_cumprod).to(device)
     
     def q_sample(self, x_start, t, noise=None):
         """Add noise to image+mask pairs"""
@@ -319,7 +320,7 @@ def train_joint_diffusion():
     
     # Model setup
     model = JointDiffusionUNet(in_channels=2, out_channels=2).to(device)
-    diffusion = JointDiffusion()
+    diffusion = JointDiffusion(device=device)
     
     # Training setup
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
