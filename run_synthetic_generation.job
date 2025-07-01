@@ -33,8 +33,8 @@ echo "📊 Target: Match style-transferred sample count (264 total)"
 echo "🎯 Breakdown: 175 benign + 89 malignant"
 echo "⏰ Started at: $(date)"
 
-# Generate synthetic images using FIXED generation script
-python quick_fix_generation.py
+# EMERGENCY SOLUTION: Use classical augmentation instead of diffusion
+python emergency_solution.py
 
 echo "✅ Synthetic generation completed at: $(date)"
 echo "📁 Synthetic images saved in: dataset/BioMedicalDataset/BUSI-Synthetic/"

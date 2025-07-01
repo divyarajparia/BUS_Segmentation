@@ -1,0 +1,3 @@
+image_path,mask_path,class
+benign/image/benign_001.png,benign/mask/benign_001_mask.png,benign
+benign/image/benign_002.png,benign/mask/benign_002_mask.png,benign
