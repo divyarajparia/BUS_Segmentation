@@ -12,4 +12,4 @@
 #     --num_epochs 50 \
 #     --batch_size 8
 
-python FINAL_train_joint_diffusion_server.py
+python generate_synthetic_dataset.py
