@@ -84,6 +84,11 @@ class ServerGenerator(nn.Module):
             nn.Conv2d(32, 1, 3, 1, 1),
             nn.Sigmoid()  # Output range [0, 1]
         )
+        
+        # IMPROVED: Initialize mask head to produce non-zero outputs
+        # Initialize the final conv layer bias to encourage non-zero masks
+        nn.init.constant_(self.mask_head[0].bias, 0.5)  # Bias towards 0.5 probability
+        nn.init.normal_(self.mask_head[0].weight, 0.0, 0.02)
     
     def forward(self, noise, class_labels):
         # Embed class labels
@@ -356,11 +361,18 @@ class ServerSimpleGAN:
                 fake_pred = self.discriminator(fake_images, class_labels)
                 g_gan_loss = self.criterion_gan(fake_pred, torch.ones_like(fake_pred))
                 
-                # L1 loss for better image quality
-                g_l1_loss = self.criterion_l1(fake_masks, real_masks) * 10
+                # IMPROVED mask loss with better weighting and BCE loss for masks
+                mask_l1_loss = self.criterion_l1(fake_masks, real_masks) * 50  # Increased weight
                 
-                # Total generator loss
-                g_loss = g_gan_loss + g_l1_loss
+                # Add BCE loss for better mask learning (treat as binary classification)
+                mask_bce_loss = nn.BCELoss()(fake_masks, real_masks) * 20
+                
+                # Add regularization to encourage non-zero masks
+                mask_mean = torch.mean(fake_masks)
+                mask_reg_loss = torch.abs(mask_mean - 0.3) * 5  # Encourage masks to have ~30% white pixels
+                
+                # Total generator loss with improved mask supervision
+                g_loss = g_gan_loss + mask_l1_loss + mask_bce_loss + mask_reg_loss
                 g_loss.backward()
                 self.optimizer_G.step()
                 
@@ -372,6 +384,7 @@ class ServerSimpleGAN:
                 pbar.set_postfix({
                     'D_Loss': f'{d_loss.item():.4f}',
                     'G_Loss': f'{g_loss.item():.4f}',
+                    'Mask_Mean': f'{mask_mean.item():.3f}',
                     'LR_G': f'{self.optimizer_G.param_groups[0]["lr"]:.6f}'
                 })
             
@@ -427,6 +440,8 @@ class ServerSimpleGAN:
         
         os.makedirs('server_test_output', exist_ok=True)
         
+        mask_stats = {'benign': [], 'malignant': []}
+        
         with torch.no_grad():
             # Generate 3 benign and 3 malignant samples
             for class_label in [0, 1]:
@@ -444,6 +459,19 @@ class ServerSimpleGAN:
                     fake_image = fake_image.squeeze().cpu()
                     fake_mask = fake_mask.squeeze().cpu()
                     
+                    # IMPROVED: Collect mask statistics
+                    mask_mean = torch.mean(fake_mask).item()
+                    mask_max = torch.max(fake_mask).item()
+                    mask_min = torch.min(fake_mask).item()
+                    mask_std = torch.std(fake_mask).item()
+                    
+                    mask_stats[class_name].append({
+                        'mean': mask_mean,
+                        'max': mask_max,
+                        'min': mask_min,
+                        'std': mask_std
+                    })
+                    
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
@@ -459,6 +487,15 @@ class ServerSimpleGAN:
                     
                     img_pil.save(img_filename)
                     mask_pil.save(mask_filename)
+        
+        # IMPROVED: Print mask statistics for debugging
+        print(f"\n📊 Epoch {epoch} Mask Statistics:")
+        for class_name in ['benign', 'malignant']:
+            stats = mask_stats[class_name]
+            avg_mean = sum(s['mean'] for s in stats) / len(stats)
+            avg_max = sum(s['max'] for s in stats) / len(stats)
+            avg_std = sum(s['std'] for s in stats) / len(stats)
+            print(f"  {class_name.capitalize()}: mean={avg_mean:.3f}, max={avg_max:.3f}, std={avg_std:.3f}")
         
         self.generator.train()
     
