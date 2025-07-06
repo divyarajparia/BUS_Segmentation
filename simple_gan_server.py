@@ -6,7 +6,7 @@ Optimized for full BUSI dataset (485 samples: 330 benign + 155 malignant)
 This version uses larger architecture and proper training parameters.
 
 Usage on server:
-    python simple_gan_server.py --mode train --data_dir /path/to/BUSI
+    python simple_gan_server.py --mode train --data_dir dataset/BioMedicalDataset/BUSI
     python simple_gan_server.py --mode generate --checkpoint simple_gan_epoch_100.pth
 """
 
@@ -183,40 +183,65 @@ class ServerBUSIDataset(Dataset):
         
         print(f"Loading server dataset from: {data_dir}")
         
+        # Check if the directory exists
+        if not os.path.exists(data_dir):
+            print(f"❌ Dataset directory does not exist: {data_dir}")
+            print(f"   Please check the path and ensure the dataset is available")
+            return
+        
         # Load samples
         for class_name in ['benign', 'malignant']:
             class_dir = os.path.join(data_dir, class_name)
             if not os.path.exists(class_dir):
+                print(f"⚠️  Class directory not found: {class_dir}")
                 continue
                 
             image_dir = os.path.join(class_dir, 'image')
             mask_dir = os.path.join(class_dir, 'mask')
             
-            if os.path.exists(image_dir) and os.path.exists(mask_dir):
-                class_count = 0
-                for img_file in os.listdir(image_dir):
-                    if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        img_path = os.path.join(image_dir, img_file)
-                        mask_path = os.path.join(mask_dir, img_file.replace('.png', '_mask.png'))
-                        
-                        if os.path.exists(mask_path):
-                            self.samples.append({
-                                'image_path': img_path,
-                                'mask_path': mask_path,
-                                'class': class_name,
-                                'label': 0 if class_name == 'benign' else 1
-                            })
-                            class_count += 1
+            if not os.path.exists(image_dir):
+                print(f"⚠️  Image directory not found: {image_dir}")
+                continue
                 
-                print(f"  Loaded {class_count} {class_name} samples")
+            if not os.path.exists(mask_dir):
+                print(f"⚠️  Mask directory not found: {mask_dir}")
+                continue
+            
+            class_count = 0
+            for img_file in os.listdir(image_dir):
+                if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    img_path = os.path.join(image_dir, img_file)
+                    mask_path = os.path.join(mask_dir, img_file.replace('.png', '_mask.png'))
+                    
+                    if os.path.exists(mask_path):
+                        self.samples.append({
+                            'image_path': img_path,
+                            'mask_path': mask_path,
+                            'class': class_name,
+                            'label': 0 if class_name == 'benign' else 1
+                        })
+                        class_count += 1
+            
+            print(f"  Loaded {class_count} {class_name} samples")
         
         print(f"Total samples loaded: {len(self.samples)}")
         
-        # Calculate class distribution
-        benign_count = sum(1 for s in self.samples if s['label'] == 0)
-        malignant_count = sum(1 for s in self.samples if s['label'] == 1)
-        print(f"  Benign: {benign_count} ({benign_count/len(self.samples)*100:.1f}%)")
-        print(f"  Malignant: {malignant_count} ({malignant_count/len(self.samples)*100:.1f}%)")
+        # Only calculate distribution if we have samples
+        if len(self.samples) > 0:
+            benign_count = sum(1 for s in self.samples if s['label'] == 0)
+            malignant_count = sum(1 for s in self.samples if s['label'] == 1)
+            print(f"  Benign: {benign_count} ({benign_count/len(self.samples)*100:.1f}%)")
+            print(f"  Malignant: {malignant_count} ({malignant_count/len(self.samples)*100:.1f}%)")
+        else:
+            print("❌ No valid samples found!")
+            print("   Expected directory structure:")
+            print("   dataset/BioMedicalDataset/BUSI/")
+            print("   ├── benign/")
+            print("   │   ├── image/")
+            print("   │   └── mask/")
+            print("   └── malignant/")
+            print("       ├── image/")
+            print("       └── mask/")
     
     def __len__(self):
         return len(self.samples)
@@ -514,7 +539,7 @@ def main():
     parser = argparse.ArgumentParser(description='Server Simple GAN for Synthetic Medical Images')
     parser.add_argument('--mode', choices=['train', 'generate'], required=True,
                        help='Mode: train or generate')
-    parser.add_argument('--data_dir', required=True,
+    parser.add_argument('--data_dir', default='dataset/BioMedicalDataset/BUSI',
                        help='Path to BUSI dataset on server')
     parser.add_argument('--output_dir', default='synthetic_gan_dataset',
                        help='Output directory for generated images')
@@ -551,6 +576,12 @@ def main():
         
         # Dataset and dataloader
         dataset = ServerBUSIDataset(args.data_dir, transform=transform, mask_transform=mask_transform)
+        
+        if len(dataset) == 0:
+            print("❌ No samples found in dataset. Cannot proceed with training.")
+            print("   Please check the dataset path and structure.")
+            return
+        
         dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
         
         # Initialize and train GAN
