@@ -1,0 +1,51 @@
+==========================================
+SLURM_JOB_ID = 1111145
+SLURM_JOB_NODELIST = b01-01
+TMPDIR = /tmp/SLURM_1111145
+==========================================
+🚨 EMERGENCY DIAGNOSIS: Trained Model Analysis
+============================================================
+📂 Analyzing: joint_diffusion_epoch_50.pth
+
+📊 Training Info:
+   Epochs: 50
+   Final Loss: 0.04559001
+   Training Samples: 485
+✅ Loss seems reasonable (0.0456)
+
+🔍 Model Weight Analysis:
+   final.weight:
+     Mean: -0.00331949
+     Std:  0.07211684
+     Zeros: 0/128 (0.0%)
+     ✅ Layer looks normal
+   final.bias:
+     Mean: 0.09062435
+     Std:  0.04355633
+     Zeros: 0/2 (0.0%)
+     ✅ Layer looks normal
+   enc1.0.weight:
+     Mean: 0.00366886
+     Std:  0.13562578
+     Zeros: 0/1152 (0.0%)
+     ✅ Layer looks normal
+   dec1.4.weight:
+     Mean: 1.00445664
+     Std:  0.00603017
+     Zeros: 0/64 (0.0%)
+     ✅ Layer looks normal
+
+📈 Overall Statistics:
+   Total parameters: 32,034,304
+   Near-zero parameters: 18 (0.00%)
+
+🎯 DIAGNOSIS:
+⚠️  DIAGNOSIS: GENERATION ISSUE
+   Model weights look OK, but generation produces black images
+   LIKELY CAUSE: Denormalization or diffusion sampling bug
+   SOLUTION: Fix the generation code, not the training
+
+💡 RECOMMENDATION:
+   🔧 FIX the generation code:
+      - The model training was probably successful
+      - The issue is in how we convert model output to images
