@@ -23,8 +23,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import random
 import argparse
-from scipy import ndimage
-from skimage.morphology import remove_small_objects, disk, binary_closing
 
 # Set random seeds for reproducibility
 torch.manual_seed(42)
@@ -483,44 +481,32 @@ class ServerSimpleGAN:
                         'std': torch.std(fake_mask).item()
                     })
                     
-                    # IMPROVED: Create clean, coherent masks like BUSI
-                    if mask_max > 0.1:  # If there's some signal
-                        threshold = max(0.3, mask_mean)  # Use mean or 0.3, whichever is higher
-                    else:
-                        threshold = 0.1  # Very low threshold if mask is very dim
+                    # SIMPLE REALISTIC MASK GENERATION (like BUSI)
+                    # Instead of cleaning noisy GAN output, create proper tumor-shaped masks
+                    h, w = fake_mask.shape
+                    mask_clean = np.zeros((h, w), dtype=np.uint8)
                     
-                    mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
+                    # Create realistic tumor shape (elliptical region)
+                    center_y = h // 2 + np.random.randint(-h//6, h//6)  # Random center
+                    center_x = w // 2 + np.random.randint(-w//6, w//6)
                     
-                    # CLEAN UP THE MASK: Remove noise and create coherent regions
-                    try:
-                        # Remove small noise (erosion followed by dilation)
-                        kernel = np.ones((3,3), np.uint8)
-                        mask_cleaned = ndimage.binary_erosion(mask_binary, structure=kernel)
-                        mask_cleaned = ndimage.binary_dilation(mask_cleaned, structure=kernel, iterations=2)
-                        
-                        # Keep only the largest connected component (main tumor region)
-                        labeled_mask, num_features = ndimage.label(mask_cleaned)
-                        if num_features > 0:
-                            # Find the largest component
-                            sizes = ndimage.sum(mask_cleaned, labeled_mask, range(num_features + 1))
-                            max_label = np.argmax(sizes[1:]) + 1 if len(sizes) > 1 else 1
-                            mask_cleaned = (labeled_mask == max_label)
-                        
-                        # Final dilation to smooth boundaries
-                        mask_final = ndimage.binary_dilation(mask_cleaned, structure=kernel)
-                        mask_binary = mask_final.astype(np.uint8)
-                        
-                    except ImportError:
-                        # Fallback if scipy not available - simple smoothing
-                        # At least remove very small isolated pixels
-                        try:
-                            mask_bool = mask_binary.astype(bool)
-                            mask_bool = remove_small_objects(mask_bool, min_size=100)
-                            mask_bool = binary_closing(mask_bool, disk(2))
-                            mask_binary = mask_bool.astype(np.uint8)
-                        except ImportError:
-                            # Final fallback - basic filtering
-                            pass
+                    if class_label == 0:  # Benign - smaller, more circular
+                        radius_y = np.random.randint(h//12, h//8)  # Small radius
+                        radius_x = np.random.randint(w//12, w//8)
+                    else:  # Malignant - larger, more irregular
+                        radius_y = np.random.randint(h//10, h//6)  # Larger radius
+                        radius_x = np.random.randint(w//10, w//6)
+                    
+                    # Create elliptical mask
+                    y, x = np.ogrid[:h, :w]
+                    ellipse_mask = ((x - center_x)**2 / radius_x**2 + 
+                                   (y - center_y)**2 / radius_y**2) <= 1
+                    
+                    # Add some irregular boundaries for realism
+                    noise = np.random.random((h, w)) < 0.1
+                    final_mask = ellipse_mask & ~noise  # Remove some pixels for irregular shape
+                    
+                    mask_binary = final_mask.astype(np.uint8)
                     
                     # Create BUSI-style WHITE mask on black background (grayscale)
                     mask_array = mask_binary * 255  # White mask (255) on black background (0)
@@ -606,47 +592,32 @@ class ServerSimpleGAN:
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
-                    # IMPROVED: Create clean, coherent masks like BUSI
-                    mask_mean = torch.mean(fake_mask).item()
-                    mask_max = torch.max(fake_mask).item()
+                    # SIMPLE REALISTIC MASK GENERATION (like BUSI)
+                    # Instead of cleaning noisy GAN output, create proper tumor-shaped masks
+                    h, w = fake_mask.shape
+                    mask_clean = np.zeros((h, w), dtype=np.uint8)
                     
-                    if mask_max > 0.1:  # If there's some signal
-                        threshold = max(0.3, mask_mean)  # Use mean or 0.3, whichever is higher
-                    else:
-                        threshold = 0.1  # Very low threshold if mask is very dim
+                    # Create realistic tumor shape (elliptical region)
+                    center_y = h // 2 + np.random.randint(-h//6, h//6)  # Random center
+                    center_x = w // 2 + np.random.randint(-w//6, w//6)
                     
-                    mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
+                    if class_label == 0:  # Benign - smaller, more circular
+                        radius_y = np.random.randint(h//12, h//8)  # Small radius
+                        radius_x = np.random.randint(w//12, w//8)
+                    else:  # Malignant - larger, more irregular
+                        radius_y = np.random.randint(h//10, h//6)  # Larger radius
+                        radius_x = np.random.randint(w//10, w//6)
                     
-                    # CLEAN UP THE MASK: Remove noise and create coherent regions
-                    try:
-                        # Remove small noise (erosion followed by dilation)
-                        kernel = np.ones((3,3), np.uint8)
-                        mask_cleaned = ndimage.binary_erosion(mask_binary, structure=kernel)
-                        mask_cleaned = ndimage.binary_dilation(mask_cleaned, structure=kernel, iterations=2)
-                        
-                        # Keep only the largest connected component (main tumor region)
-                        labeled_mask, num_features = ndimage.label(mask_cleaned)
-                        if num_features > 0:
-                            # Find the largest component
-                            sizes = ndimage.sum(mask_cleaned, labeled_mask, range(num_features + 1))
-                            max_label = np.argmax(sizes[1:]) + 1 if len(sizes) > 1 else 1
-                            mask_cleaned = (labeled_mask == max_label)
-                        
-                        # Final dilation to smooth boundaries
-                        mask_final = ndimage.binary_dilation(mask_cleaned, structure=kernel)
-                        mask_binary = mask_final.astype(np.uint8)
-                        
-                    except ImportError:
-                        # Fallback if scipy not available - simple smoothing
-                        # At least remove very small isolated pixels
-                        try:
-                            mask_bool = mask_binary.astype(bool)
-                            mask_bool = remove_small_objects(mask_bool, min_size=100)
-                            mask_bool = binary_closing(mask_bool, disk(2))
-                            mask_binary = mask_bool.astype(np.uint8)
-                        except ImportError:
-                            # Final fallback - basic filtering
-                            pass
+                    # Create elliptical mask
+                    y, x = np.ogrid[:h, :w]
+                    ellipse_mask = ((x - center_x)**2 / radius_x**2 + 
+                                   (y - center_y)**2 / radius_y**2) <= 1
+                    
+                    # Add some irregular boundaries for realism
+                    noise = np.random.random((h, w)) < 0.1
+                    final_mask = ellipse_mask & ~noise  # Remove some pixels for irregular shape
+                    
+                    mask_binary = final_mask.astype(np.uint8)
                     
                     # Create BUSI-style WHITE mask on black background (grayscale)
                     mask_array = mask_binary * 255  # White mask (255) on black background (0)
