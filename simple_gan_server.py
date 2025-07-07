@@ -23,6 +23,8 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import random
 import argparse
+from scipy import ndimage
+from skimage.morphology import remove_small_objects, disk, binary_closing
 
 # Set random seeds for reproducibility
 torch.manual_seed(42)
@@ -481,10 +483,7 @@ class ServerSimpleGAN:
                         'std': torch.std(fake_mask).item()
                     })
                     
-                    # Denormalize image from [-1, 1] to [0, 255]
-                    img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
-                    
-                    # IMPROVED: Use adaptive threshold based on mask statistics (SAME AS LOCAL VERSION)
+                    # IMPROVED: Create clean, coherent masks like BUSI
                     if mask_max > 0.1:  # If there's some signal
                         threshold = max(0.3, mask_mean)  # Use mean or 0.3, whichever is higher
                     else:
@@ -492,9 +491,42 @@ class ServerSimpleGAN:
                     
                     mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
                     
+                    # CLEAN UP THE MASK: Remove noise and create coherent regions
+                    try:
+                        # Remove small noise (erosion followed by dilation)
+                        kernel = np.ones((3,3), np.uint8)
+                        mask_cleaned = ndimage.binary_erosion(mask_binary, structure=kernel)
+                        mask_cleaned = ndimage.binary_dilation(mask_cleaned, structure=kernel, iterations=2)
+                        
+                        # Keep only the largest connected component (main tumor region)
+                        labeled_mask, num_features = ndimage.label(mask_cleaned)
+                        if num_features > 0:
+                            # Find the largest component
+                            sizes = ndimage.sum(mask_cleaned, labeled_mask, range(num_features + 1))
+                            max_label = np.argmax(sizes[1:]) + 1 if len(sizes) > 1 else 1
+                            mask_cleaned = (labeled_mask == max_label)
+                        
+                        # Final dilation to smooth boundaries
+                        mask_final = ndimage.binary_dilation(mask_cleaned, structure=kernel)
+                        mask_binary = mask_final.astype(np.uint8)
+                        
+                    except ImportError:
+                        # Fallback if scipy not available - simple smoothing
+                        # At least remove very small isolated pixels
+                        try:
+                            mask_bool = mask_binary.astype(bool)
+                            mask_bool = remove_small_objects(mask_bool, min_size=100)
+                            mask_bool = binary_closing(mask_bool, disk(2))
+                            mask_binary = mask_bool.astype(np.uint8)
+                        except ImportError:
+                            # Final fallback - basic filtering
+                            pass
+                    
                     # Create BUSI-style WHITE mask on black background (grayscale)
-                    # Since we're generating synthetic data FROM BUSI, masks should match BUSI format
                     mask_array = mask_binary * 255  # White mask (255) on black background (0)
+                    
+                    # Denormalize image from [-1, 1] to [0, 255]
+                    img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
                     # Save images
                     img_pil = Image.fromarray(img_array, mode='L')
@@ -574,7 +606,7 @@ class ServerSimpleGAN:
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
-                    # IMPROVED: Use adaptive threshold based on mask statistics (SAME AS LOCAL VERSION)
+                    # IMPROVED: Create clean, coherent masks like BUSI
                     mask_mean = torch.mean(fake_mask).item()
                     mask_max = torch.max(fake_mask).item()
                     
@@ -585,8 +617,38 @@ class ServerSimpleGAN:
                     
                     mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
                     
+                    # CLEAN UP THE MASK: Remove noise and create coherent regions
+                    try:
+                        # Remove small noise (erosion followed by dilation)
+                        kernel = np.ones((3,3), np.uint8)
+                        mask_cleaned = ndimage.binary_erosion(mask_binary, structure=kernel)
+                        mask_cleaned = ndimage.binary_dilation(mask_cleaned, structure=kernel, iterations=2)
+                        
+                        # Keep only the largest connected component (main tumor region)
+                        labeled_mask, num_features = ndimage.label(mask_cleaned)
+                        if num_features > 0:
+                            # Find the largest component
+                            sizes = ndimage.sum(mask_cleaned, labeled_mask, range(num_features + 1))
+                            max_label = np.argmax(sizes[1:]) + 1 if len(sizes) > 1 else 1
+                            mask_cleaned = (labeled_mask == max_label)
+                        
+                        # Final dilation to smooth boundaries
+                        mask_final = ndimage.binary_dilation(mask_cleaned, structure=kernel)
+                        mask_binary = mask_final.astype(np.uint8)
+                        
+                    except ImportError:
+                        # Fallback if scipy not available - simple smoothing
+                        # At least remove very small isolated pixels
+                        try:
+                            mask_bool = mask_binary.astype(bool)
+                            mask_bool = remove_small_objects(mask_bool, min_size=100)
+                            mask_bool = binary_closing(mask_bool, disk(2))
+                            mask_binary = mask_bool.astype(np.uint8)
+                        except ImportError:
+                            # Final fallback - basic filtering
+                            pass
+                    
                     # Create BUSI-style WHITE mask on black background (grayscale)
-                    # Since we're generating synthetic data FROM BUSI, masks should match BUSI format
                     mask_array = mask_binary * 255  # White mask (255) on black background (0)
                     
                     # Save images

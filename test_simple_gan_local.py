@@ -393,6 +393,32 @@ class LocalSimpleGAN:
                     mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
                     print(f"   Using threshold: {threshold:.4f}, binary pixels: {mask_binary.sum()}")
                     
+                    # CLEAN UP THE MASK: Remove noise and create coherent regions
+                    try:
+                        from scipy import ndimage
+                        # Remove small noise (erosion followed by dilation)
+                        kernel = np.ones((3,3), np.uint8)
+                        mask_cleaned = ndimage.binary_erosion(mask_binary, structure=kernel)
+                        mask_cleaned = ndimage.binary_dilation(mask_cleaned, structure=kernel, iterations=2)
+                        
+                        # Keep only the largest connected component (main tumor region)
+                        labeled_mask, num_features = ndimage.label(mask_cleaned)
+                        if num_features > 0:
+                            # Find the largest component
+                            sizes = ndimage.sum(mask_cleaned, labeled_mask, range(num_features + 1))
+                            max_label = np.argmax(sizes[1:]) + 1 if len(sizes) > 1 else 1
+                            mask_cleaned = (labeled_mask == max_label)
+                        
+                        # Final dilation to smooth boundaries
+                        mask_final = ndimage.binary_dilation(mask_cleaned, structure=kernel)
+                        mask_binary = mask_final.astype(np.uint8)
+                        print(f"   After cleaning: {mask_binary.sum()} coherent pixels")
+                        
+                    except ImportError:
+                        print("   Warning: scipy not available, using basic cleaning")
+                        # Basic noise removal without scipy
+                        pass
+                    
                     # Create BUSI-style WHITE mask on black background (grayscale)
                     mask_array = mask_binary * 255  # White mask (255) on black background (0)
                     
