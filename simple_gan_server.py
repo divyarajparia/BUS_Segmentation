@@ -259,19 +259,12 @@ class ServerBUSIDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         
-        # Load mask - IMPORTANT: Keep as RGB to preserve color information
-        mask = Image.open(sample['mask_path']).convert('RGB')
+        # Load mask - Handle BUSI white masks properly
+        mask = Image.open(sample['mask_path']).convert('L')  # Convert to grayscale
         
-        # Convert colored mask to binary mask based on class
+        # Convert to binary mask (BUSI masks are white on black)
         mask_array = np.array(mask)
-        class_name = sample['class']
-        
-        if class_name == 'benign':
-            # Extract green channel for benign (green masks)
-            binary_mask = mask_array[:, :, 1] > 128  # Green channel
-        else:  # malignant
-            # Extract red channel for malignant (red masks)
-            binary_mask = mask_array[:, :, 0] > 128  # Red channel
+        binary_mask = mask_array > 128  # Threshold white pixels
         
         # Convert to tensor
         mask_tensor = torch.from_numpy(binary_mask.astype(np.float32)).unsqueeze(0)
@@ -476,37 +469,36 @@ class ServerSimpleGAN:
                     fake_image = fake_image.squeeze().cpu()
                     fake_mask = fake_mask.squeeze().cpu()
                     
-                    # IMPROVED: Collect mask statistics
+                    # DEBUG: Print mask statistics
                     mask_mean = torch.mean(fake_mask).item()
                     mask_max = torch.max(fake_mask).item()
                     mask_min = torch.min(fake_mask).item()
-                    mask_std = torch.std(fake_mask).item()
                     
                     mask_stats[class_name].append({
                         'mean': mask_mean,
                         'max': mask_max,
                         'min': mask_min,
-                        'std': mask_std
+                        'std': torch.std(fake_mask).item()
                     })
                     
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
-                    # Create class-specific colored mask
-                    mask_binary = (fake_mask > 0.5).numpy().astype(np.uint8)  # Binary mask
+                    # IMPROVED: Use adaptive threshold based on mask statistics (SAME AS LOCAL VERSION)
+                    if mask_max > 0.1:  # If there's some signal
+                        threshold = max(0.3, mask_mean)  # Use mean or 0.3, whichever is higher
+                    else:
+                        threshold = 0.1  # Very low threshold if mask is very dim
                     
-                    # Create RGB colored mask based on class
-                    h, w = mask_binary.shape
-                    colored_mask = np.zeros((h, w, 3), dtype=np.uint8)
+                    mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
                     
-                    if class_label == 0:  # Benign - Green mask
-                        colored_mask[:, :, 1] = mask_binary * 255  # Green channel
-                    else:  # Malignant - Red mask
-                        colored_mask[:, :, 0] = mask_binary * 255  # Red channel
+                    # Create BUSI-style WHITE mask on black background (grayscale)
+                    # Since we're generating synthetic data FROM BUSI, masks should match BUSI format
+                    mask_array = mask_binary * 255  # White mask (255) on black background (0)
                     
                     # Save images
                     img_pil = Image.fromarray(img_array, mode='L')
-                    mask_pil = Image.fromarray(colored_mask, mode='RGB')  # RGB colored mask
+                    mask_pil = Image.fromarray(mask_array, mode='L')  # Grayscale white mask
                     
                     img_filename = f'server_test_output/epoch_{epoch}_{class_name}_{i+1}_img.png'
                     mask_filename = f'server_test_output/epoch_{epoch}_{class_name}_{i+1}_mask.png'
@@ -518,10 +510,11 @@ class ServerSimpleGAN:
         print(f"\n📊 Epoch {epoch} Mask Statistics:")
         for class_name in ['benign', 'malignant']:
             stats = mask_stats[class_name]
-            avg_mean = sum(s['mean'] for s in stats) / len(stats)
-            avg_max = sum(s['max'] for s in stats) / len(stats)
-            avg_std = sum(s['std'] for s in stats) / len(stats)
-            print(f"  {class_name.capitalize()}: mean={avg_mean:.3f}, max={avg_max:.3f}, std={avg_std:.3f}")
+            if stats:  # Only if we have samples
+                avg_mean = sum(s['mean'] for s in stats) / len(stats)
+                avg_max = sum(s['max'] for s in stats) / len(stats)
+                avg_std = sum(s['std'] for s in stats) / len(stats)
+                print(f"  {class_name.capitalize()}: mean={avg_mean:.3f}, max={avg_max:.3f}, std={avg_std:.3f}")
         
         self.generator.train()
     
@@ -554,7 +547,7 @@ class ServerSimpleGAN:
         
         print(f"🎨 Generating Synthetic Dataset")
         print(f"   Target: {num_benign} benign + {num_malignant} malignant")
-        print(f"   Mask format: Green for benign, Red for malignant (RGB format)")
+        print(f"   Mask format: BUSI-style white masks on black background (grayscale)")
         
         # Create output directories
         for class_name in ['benign', 'malignant']:
@@ -581,21 +574,24 @@ class ServerSimpleGAN:
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
-                    # Create class-specific colored mask
-                    mask_binary = (fake_mask > 0.5).numpy().astype(np.uint8)  # Binary mask
+                    # IMPROVED: Use adaptive threshold based on mask statistics (SAME AS LOCAL VERSION)
+                    mask_mean = torch.mean(fake_mask).item()
+                    mask_max = torch.max(fake_mask).item()
                     
-                    # Create RGB colored mask based on class
-                    h, w = mask_binary.shape
-                    colored_mask = np.zeros((h, w, 3), dtype=np.uint8)
+                    if mask_max > 0.1:  # If there's some signal
+                        threshold = max(0.3, mask_mean)  # Use mean or 0.3, whichever is higher
+                    else:
+                        threshold = 0.1  # Very low threshold if mask is very dim
                     
-                    if class_label == 0:  # Benign - Green mask
-                        colored_mask[:, :, 1] = mask_binary * 255  # Green channel
-                    else:  # Malignant - Red mask
-                        colored_mask[:, :, 0] = mask_binary * 255  # Red channel
+                    mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
+                    
+                    # Create BUSI-style WHITE mask on black background (grayscale)
+                    # Since we're generating synthetic data FROM BUSI, masks should match BUSI format
+                    mask_array = mask_binary * 255  # White mask (255) on black background (0)
                     
                     # Save images
                     img_pil = Image.fromarray(img_array, mode='L')
-                    mask_pil = Image.fromarray(colored_mask, mode='RGB')  # RGB colored mask
+                    mask_pil = Image.fromarray(mask_array, mode='L')  # Grayscale white mask
                     
                     img_filename = f'synthetic_{class_name}_{i+1:03d}.png'
                     mask_filename = f'synthetic_{class_name}_{i+1:03d}_mask.png'

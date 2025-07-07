@@ -207,12 +207,22 @@ class LocalBUSIDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         
-        # Load mask
-        mask = Image.open(sample['mask_path']).convert('L')
-        if self.mask_transform:
-            mask = self.mask_transform(mask)
+        # Load mask - Handle BUSI white masks properly
+        mask = Image.open(sample['mask_path']).convert('L')  # Convert to grayscale
         
-        return image, mask, sample['label']
+        # Convert to binary mask (BUSI masks are white on black)
+        mask_array = np.array(mask)
+        binary_mask = mask_array > 128  # Threshold white pixels
+        
+        # Convert to tensor
+        mask_tensor = torch.from_numpy(binary_mask.astype(np.float32)).unsqueeze(0)
+        
+        if self.mask_transform:
+            # Apply resize if needed
+            from torchvision.transforms.functional import resize
+            mask_tensor = resize(mask_tensor, (128, 128))  # Local uses 128x128
+        
+        return image, mask_tensor, sample['label']
 
 class LocalSimpleGAN:
     """Simple GAN for local testing"""
@@ -365,21 +375,38 @@ class LocalSimpleGAN:
                     fake_image = fake_image.squeeze().cpu()
                     fake_mask = fake_mask.squeeze().cpu()
                     
+                    # DEBUG: Print mask statistics
+                    mask_mean = torch.mean(fake_mask).item()
+                    mask_max = torch.max(fake_mask).item()
+                    mask_min = torch.min(fake_mask).item()
+                    print(f"🔍 {class_name} mask {i+1}: mean={mask_mean:.4f}, min={mask_min:.4f}, max={mask_max:.4f}")
+                    
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
-                    # Denormalize mask from [0, 1] to [0, 255]
-                    mask_array = (fake_mask * 255).clamp(0, 255).numpy().astype(np.uint8)
+                    # IMPROVED: Use adaptive threshold based on mask statistics
+                    if mask_max > 0.1:  # If there's some signal
+                        threshold = max(0.3, mask_mean)  # Use mean or 0.3, whichever is higher
+                    else:
+                        threshold = 0.1  # Very low threshold if mask is very dim
+                    
+                    mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
+                    print(f"   Using threshold: {threshold:.4f}, binary pixels: {mask_binary.sum()}")
+                    
+                    # Create BUSI-style WHITE mask on black background (grayscale)
+                    mask_array = mask_binary * 255  # White mask (255) on black background (0)
                     
                     # Save images
                     img_pil = Image.fromarray(img_array, mode='L')
-                    mask_pil = Image.fromarray(mask_array, mode='L')
+                    mask_pil = Image.fromarray(mask_array, mode='L')  # Grayscale white mask
                     
                     img_filename = f'local_test_output/epoch_{epoch}_{class_name}_{i+1}_img.png'
                     mask_filename = f'local_test_output/epoch_{epoch}_{class_name}_{i+1}_mask.png'
                     
                     img_pil.save(img_filename)
                     mask_pil.save(mask_filename)
+                    
+                    print(f"   Saved: {img_filename} and {mask_filename}")
         
         self.generator.train()
 
