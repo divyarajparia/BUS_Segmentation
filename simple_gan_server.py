@@ -259,12 +259,29 @@ class ServerBUSIDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         
-        # Load mask
-        mask = Image.open(sample['mask_path']).convert('L')
-        if self.mask_transform:
-            mask = self.mask_transform(mask)
+        # Load mask - IMPORTANT: Keep as RGB to preserve color information
+        mask = Image.open(sample['mask_path']).convert('RGB')
         
-        return image, mask, sample['label']
+        # Convert colored mask to binary mask based on class
+        mask_array = np.array(mask)
+        class_name = sample['class']
+        
+        if class_name == 'benign':
+            # Extract green channel for benign (green masks)
+            binary_mask = mask_array[:, :, 1] > 128  # Green channel
+        else:  # malignant
+            # Extract red channel for malignant (red masks)
+            binary_mask = mask_array[:, :, 0] > 128  # Red channel
+        
+        # Convert to tensor
+        mask_tensor = torch.from_numpy(binary_mask.astype(np.float32)).unsqueeze(0)
+        
+        if self.mask_transform:
+            # Apply resize if needed
+            from torchvision.transforms.functional import resize
+            mask_tensor = resize(mask_tensor, (256, 256))
+        
+        return image, mask_tensor, sample['label']
 
 class ServerSimpleGAN:
     """Server Simple GAN for full dataset training"""
@@ -475,12 +492,21 @@ class ServerSimpleGAN:
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
-                    # Denormalize mask from [0, 1] to [0, 255]
-                    mask_array = (fake_mask * 255).clamp(0, 255).numpy().astype(np.uint8)
+                    # Create class-specific colored mask
+                    mask_binary = (fake_mask > 0.5).numpy().astype(np.uint8)  # Binary mask
+                    
+                    # Create RGB colored mask based on class
+                    h, w = mask_binary.shape
+                    colored_mask = np.zeros((h, w, 3), dtype=np.uint8)
+                    
+                    if class_label == 0:  # Benign - Green mask
+                        colored_mask[:, :, 1] = mask_binary * 255  # Green channel
+                    else:  # Malignant - Red mask
+                        colored_mask[:, :, 0] = mask_binary * 255  # Red channel
                     
                     # Save images
                     img_pil = Image.fromarray(img_array, mode='L')
-                    mask_pil = Image.fromarray(mask_array, mode='L')
+                    mask_pil = Image.fromarray(colored_mask, mode='RGB')  # RGB colored mask
                     
                     img_filename = f'server_test_output/epoch_{epoch}_{class_name}_{i+1}_img.png'
                     mask_filename = f'server_test_output/epoch_{epoch}_{class_name}_{i+1}_mask.png'
@@ -528,6 +554,7 @@ class ServerSimpleGAN:
         
         print(f"🎨 Generating Synthetic Dataset")
         print(f"   Target: {num_benign} benign + {num_malignant} malignant")
+        print(f"   Mask format: Green for benign, Red for malignant (RGB format)")
         
         # Create output directories
         for class_name in ['benign', 'malignant']:
@@ -554,12 +581,21 @@ class ServerSimpleGAN:
                     # Denormalize image from [-1, 1] to [0, 255]
                     img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
-                    # Denormalize mask from [0, 1] to [0, 255]
-                    mask_array = (fake_mask * 255).clamp(0, 255).numpy().astype(np.uint8)
+                    # Create class-specific colored mask
+                    mask_binary = (fake_mask > 0.5).numpy().astype(np.uint8)  # Binary mask
+                    
+                    # Create RGB colored mask based on class
+                    h, w = mask_binary.shape
+                    colored_mask = np.zeros((h, w, 3), dtype=np.uint8)
+                    
+                    if class_label == 0:  # Benign - Green mask
+                        colored_mask[:, :, 1] = mask_binary * 255  # Green channel
+                    else:  # Malignant - Red mask
+                        colored_mask[:, :, 0] = mask_binary * 255  # Red channel
                     
                     # Save images
                     img_pil = Image.fromarray(img_array, mode='L')
-                    mask_pil = Image.fromarray(mask_array, mode='L')
+                    mask_pil = Image.fromarray(colored_mask, mode='RGB')  # RGB colored mask
                     
                     img_filename = f'synthetic_{class_name}_{i+1:03d}.png'
                     mask_filename = f'synthetic_{class_name}_{i+1:03d}_mask.png'
