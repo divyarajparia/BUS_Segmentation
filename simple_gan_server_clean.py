@@ -141,11 +141,9 @@ class ServerDiscriminator(nn.Module):
         class_emb = class_emb.view(batch_size, self.img_size, self.img_size)
         class_emb = class_emb.unsqueeze(1)  # Add channel dimension
         
-        # Concatenate image and class info
-        combined = torch.cat([image, class_emb], dim=1)
-        
-        # Process through conv layers
-        conv_out = self.conv_layers(combined)
+        # The input 'image' is already combined (image + mask = 2 channels)
+        # Process through conv layers directly
+        conv_out = self.conv_layers(image)
         
         # Flatten and combine with class embedding
         conv_flat = conv_out.view(batch_size, -1)
