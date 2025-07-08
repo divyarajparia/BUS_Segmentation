@@ -107,14 +107,14 @@ class ConditionalDiscriminator(nn.Module):
         self.num_classes = num_classes
         self.img_size = img_size
         
-        # Class embedding
-        self.class_embedding = nn.Embedding(num_classes, img_size * img_size)
+        # Class embedding (much smaller)
+        self.class_embedding = nn.Embedding(num_classes, 50)
         
         # Main discriminator network
-        # Input: image + mask + class_map = 3 channels
+        # Input: image + mask = 2 channels
         self.conv_layers = nn.Sequential(
             # 256x256 -> 128x128
-            nn.Conv2d(img_channels + 1 + 1, 64, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(img_channels + 1, 64, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
             
             # 128x128 -> 64x64
@@ -138,24 +138,29 @@ class ConditionalDiscriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             
             # 8x8 -> 1x1
-            nn.Conv2d(1024, 1, kernel_size=8, stride=1, padding=0),
-            nn.Sigmoid()
+            nn.Conv2d(1024, 1, kernel_size=8, stride=1, padding=0)
         )
         
     def forward(self, image, mask, labels):
         batch_size = image.size(0)
         
-        # Create class conditioning map
-        class_emb = self.class_embedding(labels)
-        class_map = class_emb.view(batch_size, 1, self.img_size, self.img_size)
+        # Simple concatenation approach
+        x = torch.cat([image, mask], dim=1)  # [batch_size, 2, 256, 256]
         
-        # Concatenate image, mask, and class map
-        x = torch.cat([image, mask, class_map], dim=1)
+        # Pass through conv layers
+        x = self.conv_layers(x)  # Should output [batch_size, 1, 1, 1]
+        x = x.view(batch_size)  # [batch_size]
         
-        # Pass through discriminator
-        output = self.conv_layers(x)
-        # Ensure output shape is [batch_size]
-        return output.view(batch_size)
+        # Add simple class conditioning via a small MLP
+        class_emb = self.class_embedding(labels)  # [batch_size, 50]
+        
+        # Combine discriminator output with class info
+        combined = torch.cat([x.unsqueeze(1), class_emb], dim=1)  # [batch_size, 51]
+        
+        # Final classification
+        final_output = torch.sigmoid(torch.mean(combined, dim=1))  # Simple average + sigmoid
+        
+        return final_output
 
 class BUSIDataset(Dataset):
     """BUSI Dataset loader for GAN training"""
@@ -237,9 +242,9 @@ class BUSIConditionalGAN:
         self.generator.apply(self._weights_init)
         self.discriminator.apply(self._weights_init)
         
-        # Optimizers
+        # Optimizers with different learning rates for stability
         self.g_optimizer = optim.Adam(self.generator.parameters(), lr=lr, betas=(0.5, 0.999))
-        self.d_optimizer = optim.Adam(self.discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
+        self.d_optimizer = optim.Adam(self.discriminator.parameters(), lr=lr * 0.5, betas=(0.5, 0.999))  # Slower discriminator
         
         # Loss function
         self.criterion = nn.BCELoss()

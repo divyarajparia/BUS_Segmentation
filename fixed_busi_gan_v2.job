@@ -1,0 +1,52 @@
+#!/bin/bash
+#SBATCH --job-name=busi_gan_fixed
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=32G
+#SBATCH --time=4:00:00
+#SBATCH --output=logs/busi_gan_fixed_%j.out
+#SBATCH --error=logs/busi_gan_fixed_%j.err
+
+echo "🚀 Starting Fixed BUSI GAN Training..."
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURM_NODELIST"
+
+# Create logs directory
+mkdir -p logs
+mkdir -p checkpoints
+mkdir -p training_samples
+
+# First, test the fixed architecture
+echo "🧪 Testing fixed GAN architecture..."
+python test_fixed_gan.py
+
+# Check if test passed
+if [ $? -eq 0 ]; then
+    echo "✅ Architecture test passed! Starting training..."
+    
+    # Train the fixed GAN
+    python synthetic_busi_gan.py \
+        --mode train \
+        --data_dir dataset/BioMedicalDataset/BUSI \
+        --epochs 100 \
+        --batch_size 8 \
+        --lr 0.0002 \
+        --checkpoint_dir checkpoints
+    
+    echo "🎯 Training completed! Generating final synthetic dataset..."
+    
+    # Generate synthetic data using the final checkpoint
+    python synthetic_busi_gan.py \
+        --mode generate \
+        --checkpoint checkpoints/busi_gan_final.pth \
+        --num_benign 175 \
+        --num_malignant 89 \
+        --output_dir synthetic_busi_dataset_fixed
+    
+    echo "🎉 All done! Check synthetic_busi_dataset_fixed/ for your 264 synthetic images!"
+    
+else
+    echo "❌ Architecture test failed! Check the errors above."
+    exit 1
+fi 
