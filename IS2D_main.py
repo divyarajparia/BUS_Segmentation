@@ -44,6 +44,7 @@ if __name__=='__main__' :
     parser = argparse.ArgumentParser(description='Following are the arguments that can be passed form the terminal itself!')
     parser.add_argument('--data_path', type=str, default='dataset/BioMedicalDataset')
     parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined'])
+    parser.add_argument('--synthetic_data_dir', type=str, default='synthetic_busi_madgnet', help='Directory containing synthetic BUSI data')
     parser.add_argument('--test_data_type', type=str, required=False, choices=['CVC-ClinicDB', 'Kvasir', 'CVC-300', 'CVC-ColonDB', 'ETIS-LaribPolypDB',
                                                                                             'DSB2018', 'MonuSeg2018', 'ISIC2018', 'PH2', 'COVID19', 'COVID19_2', 'BUSI', 'STU', 'BUS-UCLM'])
 

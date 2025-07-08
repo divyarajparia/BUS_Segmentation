@@ -80,7 +80,14 @@ class BaseSegmentationExperiment(object):
         elif self.args.train_data_type == 'BUSI-Combined':
             train_dataset = BUSICombinedDataset(self.args.train_dataset_dir, mode='train', transform=train_image_transform, target_transform=train_target_transform)
         elif self.args.train_data_type == 'BUSI-Synthetic-Combined':
-            train_dataset = BUSICombinedDataset(self.args.train_dataset_dir, mode='train', transform=train_image_transform, target_transform=train_target_transform)
+            from dataset.BioMedicalDataset.BUSISyntheticCombinedDataset import BUSISyntheticCombinedDataset
+            train_dataset = BUSISyntheticCombinedDataset(
+                busi_dir=os.path.join(self.args.data_path, 'BUSI'),
+                synthetic_dir=getattr(self.args, 'synthetic_data_dir', 'synthetic_busi_madgnet'),
+                mode='train', 
+                transform=train_image_transform, 
+                target_transform=train_target_transform
+            )
         # Add other datasets as needed
         elif self.args.train_data_type == 'BUSIBUSUCLM':
             busi_dataset = BUSISegmentationDataset('dataset/BioMedicalDataset/BUSI', mode='train', transform=train_image_transform, target_transform=train_target_transform)

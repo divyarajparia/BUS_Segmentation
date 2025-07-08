@@ -1,0 +1,85 @@
+#!/bin/bash
+#SBATCH --job-name=madgnet_synthetic
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=32G
+#SBATCH --time=8:00:00
+#SBATCH --output=logs/madgnet_synthetic_%j.out
+#SBATCH --error=logs/madgnet_synthetic_%j.err
+
+echo "🔬 MADGNET Training with Synthetic BUSI Data"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURM_NODELIST"
+echo "GPU: $CUDA_VISIBLE_DEVICES"
+
+# Create necessary directories
+mkdir -p logs
+mkdir -p model_weights
+
+# Configuration
+GAN_CHECKPOINT="checkpoints/busi_gan_final.pth"  # Update this path if needed
+SYNTHETIC_DIR="synthetic_busi_madgnet"
+MADGNET_EPOCHS=100
+BATCH_SIZE=4
+
+echo "📋 Configuration:"
+echo "   GAN Checkpoint: $GAN_CHECKPOINT"
+echo "   Synthetic Directory: $SYNTHETIC_DIR"
+echo "   MADGNET Epochs: $MADGNET_EPOCHS"
+echo "   Batch Size: $BATCH_SIZE"
+
+# Check if GAN checkpoint exists
+if [ ! -f "$GAN_CHECKPOINT" ]; then
+    echo "❌ GAN checkpoint not found: $GAN_CHECKPOINT"
+    echo "Available checkpoints in checkpoints/:"
+    ls -la checkpoints/*.pth 2>/dev/null || echo "No checkpoints found"
+    exit 1
+fi
+
+echo ""
+echo "🚀 Starting Complete Pipeline..."
+
+# Run the complete pipeline
+python train_madgnet_with_synthetic.py \
+    --gan_checkpoint "$GAN_CHECKPOINT" \
+    --synthetic_dir "$SYNTHETIC_DIR" \
+    --num_benign 175 \
+    --num_malignant 89 \
+    --madgnet_epochs $MADGNET_EPOCHS \
+    --batch_size $BATCH_SIZE \
+    --gpu 0
+
+# Check if pipeline completed successfully
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "🎉 Pipeline completed successfully!"
+    echo ""
+    echo "📁 Output Locations:"
+    echo "   Synthetic Data: $SYNTHETIC_DIR/"
+    echo "   MADGNET Model: model_weights/BUSI-Synthetic-Combined/"
+    echo "   Test Results: model_weights/BUSI-Synthetic-Combined/test_reports/"
+    
+    # Display final test results if available
+    RESULTS_DIR="model_weights/BUSI-Synthetic-Combined/test_reports"
+    if [ -d "$RESULTS_DIR" ]; then
+        echo ""
+        echo "📊 Final Test Results:"
+        LATEST_RESULT=$(ls -t "$RESULTS_DIR"/*.txt 2>/dev/null | head -n1)
+        if [ -f "$LATEST_RESULT" ]; then
+            echo "   File: $LATEST_RESULT"
+            echo "   Content:"
+            cat "$LATEST_RESULT"
+        else
+            echo "   No test results found yet."
+        fi
+    fi
+    
+else
+    echo ""
+    echo "❌ Pipeline failed. Check the logs above for details."
+    exit 1
+fi
+
+echo ""
+echo "✅ Job completed!" 
