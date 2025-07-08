@@ -13,4 +13,4 @@
 #     --batch_size 8
 
 # Train with full BUSI dataset
-python simple_gan_server.py --mode train --epochs 100 --batch_size 8
+python run_busi_gan.py train --data_dir dataset/BioMedicalDataset/BUSI --epochs 100

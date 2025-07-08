@@ -24,7 +24,7 @@ echo "Installing dependencies..."
 pip install --user -r requirements_gan.txt
 
 # Set data directory (adjust path according to your server)
-DATA_DIR="dataset/BUSI"  # Change this to your actual BUSI dataset path
+DATA_DIR="dataset/BioMedicalDataset/BUSI"  # Change this to your actual BUSI dataset path
 
 # Check if data directory exists
 if [ ! -d "$DATA_DIR" ]; then
