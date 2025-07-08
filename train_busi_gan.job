@@ -1,0 +1,56 @@
+#!/bin/bash
+#SBATCH --job-name=busi_gan_train
+#SBATCH --time=06:00:00
+#SBATCH --gres=gpu:1
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=4
+#SBATCH --output=logs/busi_gan_train_%j.out
+#SBATCH --error=logs/busi_gan_train_%j.err
+
+echo "Starting BUSI GAN training job..."
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURM_NODELIST"
+echo "GPU: $CUDA_VISIBLE_DEVICES"
+
+# Load modules (adjust according to your server)
+module load python/3.8
+module load cuda/11.1
+
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
+# Install dependencies
+echo "Installing dependencies..."
+pip install --user -r requirements_gan.txt
+
+# Set data directory (adjust path according to your server)
+DATA_DIR="dataset/BUSI"  # Change this to your actual BUSI dataset path
+
+# Check if data directory exists
+if [ ! -d "$DATA_DIR" ]; then
+    echo "Error: Data directory $DATA_DIR not found!"
+    echo "Please adjust DATA_DIR variable in this script"
+    exit 1
+fi
+
+echo "Data directory: $DATA_DIR"
+echo "Starting training..."
+
+# Train the GAN
+python run_busi_gan.py train \
+    --data_dir "$DATA_DIR" \
+    --epochs 200 \
+    --batch_size 8 \
+    --checkpoint_dir checkpoints
+
+echo "Training completed!"
+
+# Generate synthetic data using the final checkpoint
+echo "Generating synthetic dataset..."
+python run_busi_gan.py generate \
+    --checkpoint checkpoints/busi_gan_final.pth \
+    --num_benign 175 \
+    --num_malignant 89
+
+echo "Job completed successfully!"
+echo "Check synthetic_busi_dataset/ for generated images" 
