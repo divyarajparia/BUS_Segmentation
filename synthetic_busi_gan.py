@@ -403,9 +403,12 @@ class BUSIConditionalGAN:
                     image = fake_image.squeeze().cpu().numpy()
                     mask = fake_mask.squeeze().cpu().numpy()
                     
-                    # Denormalize image from [-1, 1] to [0, 255]
-                    image = ((image + 1) * 127.5).astype(np.uint8)
-                    mask = (mask * 255).astype(np.uint8)
+                    # Denormalize image from [-1, 1] to [0, 255] with clipping
+                    image = ((image + 1) * 127.5).clip(0, 255).astype(np.uint8)
+                    mask = (mask * 255).clip(0, 255).astype(np.uint8)
+                    
+                    # Ensure binary mask for better visualization
+                    mask = (mask > 127).astype(np.uint8) * 255
                     
                     # Save
                     Image.fromarray(image, mode='L').save(
