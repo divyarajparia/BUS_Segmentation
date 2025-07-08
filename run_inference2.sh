@@ -12,4 +12,5 @@
 #     --num_epochs 50 \
 #     --batch_size 8
 
-python generate_synthetic_dataset.py
+# Train with full BUSI dataset
+python simple_gan_server.py --mode train --epochs 100 --batch_size 8

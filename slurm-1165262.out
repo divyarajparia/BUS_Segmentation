@@ -1,0 +1,12 @@
+==========================================
+SLURM_JOB_ID = 1165262
+SLURM_JOB_NODELIST = b04-10
+TMPDIR = /tmp/SLURM_1165262
+==========================================
+Using device: cuda
+🚀 Training Server GAN...
+Loading server dataset from: /path/to/your/BUSI/dataset
+❌ Dataset directory does not exist: /path/to/your/BUSI/dataset
+   Please check the path and ensure the dataset is available
+❌ No samples found in dataset. Cannot proceed with training.
+   Please check the dataset path and structure.

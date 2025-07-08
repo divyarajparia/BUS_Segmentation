@@ -1,0 +1,17 @@
+==========================================
+SLURM_JOB_ID = 1165260
+SLURM_JOB_NODELIST = b04-10
+TMPDIR = /tmp/SLURM_1165260
+==========================================
+Using device: cuda
+🚀 Training Server GAN...
+Loading server dataset from: /path/to/your/BUSI/dataset
+Total samples loaded: 0
+Traceback (most recent call last):
+  File "simple_gan_server.py", line 583, in <module>
+    main() 
+  File "simple_gan_server.py", line 553, in main
+    dataset = ServerBUSIDataset(args.data_dir, transform=transform, mask_transform=mask_transform)
+  File "simple_gan_server.py", line 218, in __init__
+    print(f"  Benign: {benign_count} ({benign_count/len(self.samples)*100:.1f}%)")
+ZeroDivisionError: division by zero
