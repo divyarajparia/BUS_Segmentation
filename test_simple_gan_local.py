@@ -358,6 +358,9 @@ class LocalSimpleGAN:
         
         os.makedirs('local_test_output', exist_ok=True)
         
+        # Initialize mask statistics tracking
+        mask_stats = {'benign': [], 'malignant': []}
+        
         with torch.no_grad():
             # Generate 2 benign and 2 malignant samples
             for class_label in [0, 1]:
@@ -379,70 +382,145 @@ class LocalSimpleGAN:
                     mask_mean = torch.mean(fake_mask).item()
                     mask_max = torch.max(fake_mask).item()
                     mask_min = torch.min(fake_mask).item()
-                    print(f"🔍 {class_name} mask {i+1}: mean={mask_mean:.4f}, min={mask_min:.4f}, max={mask_max:.4f}")
                     
-                    # Denormalize image from [-1, 1] to [0, 255]
-                    img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
+                    mask_stats[class_name].append({
+                        'mean': mask_mean,
+                        'max': mask_max,
+                        'min': mask_min,
+                        'std': torch.std(fake_mask).item()
+                    })
                     
-                    # IMPROVED: Use adaptive threshold based on mask statistics
-                    if mask_max > 0.1:  # If there's some signal
-                        threshold = max(0.3, mask_mean)  # Use mean or 0.3, whichever is higher
-                    else:
-                        threshold = 0.1  # Very low threshold if mask is very dim
+                    # REALISTIC MASK GENERATION USING GENERATOR OUTPUT
+                    # Use the generator's learned mask features and enhance them
+                    h, w = fake_mask.shape
                     
-                    mask_binary = (fake_mask > threshold).numpy().astype(np.uint8)
-                    print(f"   Using threshold: {threshold:.4f}, binary pixels: {mask_binary.sum()}")
+                    # Convert generator mask to numpy for processing
+                    generator_mask = fake_mask.numpy()
                     
-                    # SIMPLE REALISTIC MASK GENERATION (like BUSI)
-                    # Create clean, smooth tumor-shaped masks exactly like BUSI dataset
-                    h, w = mask_binary.shape
+                    # Normalize and threshold the generator output
+                    mask_normalized = (generator_mask - generator_mask.min()) / (generator_mask.max() - generator_mask.min() + 1e-8)
                     
-                    # Create realistic tumor shape with smooth boundaries
-                    center_y = h // 2 + np.random.randint(-h//8, h//8)  # Near center
-                    center_x = w // 2 + np.random.randint(-w//8, w//8)
+                    # Use adaptive thresholding based on class
+                    if class_label == 0:  # Benign - more defined, smaller regions
+                        threshold = 0.6  # Higher threshold for cleaner, smaller masks
+                        smooth_sigma = 1.5
+                    else:  # Malignant - more complex, irregular shapes
+                        threshold = 0.4  # Lower threshold for larger, more irregular masks
+                        smooth_sigma = 0.8
                     
-                    if class_label == 0:  # Benign - smaller, more regular
-                        radius_y = np.random.randint(h//15, h//10)  # Smaller radius
-                        radius_x = np.random.randint(w//15, w//10)
-                        irregularity = 0.8  # More regular
-                    else:  # Malignant - larger, more irregular
-                        radius_y = np.random.randint(h//12, h//7)   # Larger radius
-                        radius_x = np.random.randint(w//12, w//7)
-                        irregularity = 0.6  # More irregular
+                    # Create base mask from generator output
+                    base_mask = mask_normalized > threshold
                     
-                    # Create smooth elliptical mask
-                    y, x = np.ogrid[:h, :w]
-                    ellipse_mask = ((x - center_x)**2 / radius_x**2 + 
-                                   (y - center_y)**2 / radius_y**2) <= irregularity
+                    # IMPROVED: Check if generator output is too fragmented
+                    from scipy.ndimage import label
+                    labeled_mask, num_components = label(base_mask)
+                    total_area = base_mask.sum()
                     
-                    # CLEAN SMOOTH BOUNDARIES - no noise
-                    # Apply Gaussian smoothing for realistic boundaries
+                    # If too fragmented or too small, use hybrid approach
+                    use_hybrid = (num_components > 5 or total_area < 100 or total_area > h*w*0.7)
+                    
+                    if use_hybrid:
+                        print(f"   Using hybrid approach: {num_components} components, area={total_area}")
+                        # Create realistic base shape and enhance with generator hints
+                        center_y = h // 2 + np.random.randint(-h//6, h//6)
+                        center_x = w // 2 + np.random.randint(-w//6, w//6)
+                        
+                        if class_label == 0:  # Benign - smaller, more regular
+                            radius_y = np.random.randint(h//12, h//8)  # 8-16 pixels for 128x128
+                            radius_x = np.random.randint(w//12, w//8)
+                            irregularity = 0.9
+                        else:  # Malignant - larger, more irregular
+                            radius_y = np.random.randint(h//10, h//6)  # 12-21 pixels for 128x128
+                            radius_x = np.random.randint(w//10, w//6)
+                            irregularity = 0.7
+                        
+                        # Create base ellipse
+                        y, x = np.ogrid[:h, :w]
+                        ellipse_base = ((x - center_x)**2 / radius_x**2 + 
+                                       (y - center_y)**2 / radius_y**2) <= irregularity
+                        
+                        # Enhance with generator information where available
+                        if total_area > 50:  # If generator has some signal
+                            # Use generator hints to add irregularity
+                            generator_influence = mask_normalized * 0.3  # Weak influence
+                            combined_mask = ellipse_base.astype(float) + generator_influence
+                            base_mask = combined_mask > 0.6
+                        else:
+                            base_mask = ellipse_base
+                    
+                    # Step 4: Add realistic irregularities and smooth boundaries
                     try:
                         from scipy import ndimage
-                        # Smooth the mask edges
-                        ellipse_smooth = ndimage.gaussian_filter(ellipse_mask.astype(float), sigma=1.0)
-                        final_mask = ellipse_smooth > 0.5
+                        from scipy.ndimage import binary_erosion, binary_dilation
+                        
+                        # Apply morphological operations for realistic shapes
+                        if class_label == 0:  # Benign - more regular
+                            # Smooth and slightly regularize
+                            processed_mask = ndimage.gaussian_filter(base_mask.astype(float), sigma=smooth_sigma)
+                            final_mask = processed_mask > 0.5
+                            
+                            # Clean up small artifacts
+                            final_mask = binary_erosion(final_mask, iterations=1)
+                            final_mask = binary_dilation(final_mask, iterations=1)
+                            
+                        else:  # Malignant - more irregular and complex
+                            # Create irregular boundaries
+                            processed_mask = ndimage.gaussian_filter(base_mask.astype(float), sigma=smooth_sigma)
+                            
+                            # Add some controlled irregularity
+                            noise_pattern = np.random.normal(0, 0.1, (h, w))
+                            irregular_mask = processed_mask + noise_pattern
+                            final_mask = irregular_mask > 0.4
+                            
+                            # Morphological operations for realistic malignant appearance
+                            final_mask = binary_dilation(final_mask, iterations=1)
+                            final_mask = binary_erosion(final_mask, iterations=1)
+                        
+                        # Ensure we have at least one connected component
+                        from scipy.ndimage import label
+                        labeled_mask, num_features = label(final_mask)
+                        if num_features == 0:
+                            # Fallback: create a small central region
+                            center_y, center_x = h//2, w//2
+                            radius = 15 if class_label == 0 else 25
+                            y, x = np.ogrid[:h, :w]
+                            fallback_mask = (x - center_x)**2 + (y - center_y)**2 <= radius**2
+                            final_mask = fallback_mask
+                        
                     except ImportError:
-                        # Fallback without scipy - basic smoothing
-                        final_mask = ellipse_mask
+                        # Fallback without scipy - use generator output more directly
+                        final_mask = base_mask
                     
+                    # Convert to binary mask
                     mask_binary = final_mask.astype(np.uint8)
-                    print(f"   Clean realistic tumor mask: {mask_binary.sum()} pixels")
                     
                     # Create BUSI-style WHITE mask on black background (grayscale)
                     mask_array = mask_binary * 255  # White mask (255) on black background (0)
+                    
+                    # Denormalize image from [-1, 1] to [0, 255]
+                    img_array = ((fake_image + 1) * 127.5).clamp(0, 255).numpy().astype(np.uint8)
                     
                     # Save images
                     img_pil = Image.fromarray(img_array, mode='L')
                     mask_pil = Image.fromarray(mask_array, mode='L')  # Grayscale white mask
                     
-                    img_filename = f'local_test_output/epoch_{epoch}_{class_name}_{i+1}_img.png'
-                    mask_filename = f'local_test_output/epoch_{epoch}_{class_name}_{i+1}_mask.png'
+                    img_filename = f'local_test_output/test_{class_name}_{i+1:02d}_img.png'
+                    mask_filename = f'local_test_output/test_{class_name}_{i+1:02d}_mask.png'
                     
                     img_pil.save(img_filename)
                     mask_pil.save(mask_filename)
                     
                     print(f"   Saved: {img_filename} and {mask_filename}")
+        
+        # Print mask statistics summary
+        print(f"\n📊 Epoch {epoch} Mask Statistics:")
+        for class_name in ['benign', 'malignant']:
+            stats = mask_stats[class_name]
+            if stats:  # Only if we have samples
+                avg_mean = sum(s['mean'] for s in stats) / len(stats)
+                avg_max = sum(s['max'] for s in stats) / len(stats)
+                avg_std = sum(s['std'] for s in stats) / len(stats)
+                print(f"  {class_name.capitalize()}: mean={avg_mean:.3f}, max={avg_max:.3f}, std={avg_std:.3f}")
         
         self.generator.train()
 
