@@ -137,8 +137,8 @@ class ConditionalDiscriminator(nn.Module):
             nn.BatchNorm2d(1024),
             nn.LeakyReLU(0.2, inplace=True),
             
-            # 8x8 -> 4x4
-            nn.Conv2d(1024, 1, kernel_size=4, stride=1, padding=0),
+            # 8x8 -> 1x1
+            nn.Conv2d(1024, 1, kernel_size=8, stride=1, padding=0),
             nn.Sigmoid()
         )
         
@@ -154,7 +154,8 @@ class ConditionalDiscriminator(nn.Module):
         
         # Pass through discriminator
         output = self.conv_layers(x)
-        return output.view(-1)
+        # Ensure output shape is [batch_size]
+        return output.view(batch_size)
 
 class BUSIDataset(Dataset):
     """BUSI Dataset loader for GAN training"""
