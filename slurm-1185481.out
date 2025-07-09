@@ -1,0 +1,33 @@
+==========================================
+SLURM_JOB_ID = 1185481
+SLURM_JOB_NODELIST = a03-15
+TMPDIR = /tmp/SLURM_1185481
+==========================================
+Using device: cuda
+Loading BUSI dataset from: dataset/BioMedicalDataset/BUSI
+Loaded 647 samples from dataset/BioMedicalDataset/BUSI
+  Benign: 437, Malignant: 210
+Initialized Conditional GAN on cuda
+Generator parameters: 4,462,426
+Discriminator parameters: 11,297,473
+Training Conditional GAN for 100 epochs...
+Epoch 1/100:   0%|          | 0/81 [00:00<?, ?it/s]Epoch 1/100:   0%|          | 0/81 [00:04<?, ?it/s]
+Traceback (most recent call last):
+  File "synthetic_busi_gan.py", line 604, in <module>
+    main() 
+  File "synthetic_busi_gan.py", line 570, in main
+    g_losses, d_losses = gan.train(
+  File "synthetic_busi_gan.py", line 298, in train
+    d_loss_real = self.criterion(output_real, real_label)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1110, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/nn/modules/loss.py", line 612, in forward
+    return F.binary_cross_entropy(input, target, weight=self.weight, reduction=self.reduction)
+  File "/home1/dr_272/.conda/envs/madgnet_env_gpu/lib/python3.8/site-packages/torch/nn/functional.py", line 3056, in binary_cross_entropy
+    raise ValueError(
+ValueError: Using a target size (torch.Size([8])) that is different to the input size (torch.Size([200])) is deprecated. Please ensure they have the same size.
+🚀 Starting BUSI GAN Training...
+   Data directory: dataset/BioMedicalDataset/BUSI
+   Epochs: 100
+   Batch size: 8
+   Checkpoint directory: checkpoints

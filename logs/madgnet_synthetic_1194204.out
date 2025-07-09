@@ -1,0 +1,84 @@
+==========================================
+SLURM_JOB_ID = 1194204
+SLURM_JOB_NODELIST = a02-01
+TMPDIR = /tmp/SLURM_1194204
+==========================================
+🔬 MADGNET Training with Synthetic BUSI Data
+Job ID: 1194204
+Node: a02-01
+GPU: 0
+📋 Configuration:
+   GAN Checkpoint: checkpoints/busi_gan_final.pth
+   Synthetic Directory: synthetic_busi_madgnet
+   MADGNET Epochs: 100
+   Batch Size: 4
+
+🚀 Starting Complete Pipeline...
+🎨 Generating Final Synthetic BUSI Dataset for MADGNET Training
+======================================================================
+📁 Checkpoint: checkpoints/busi_gan_final.pth
+📁 Output: synthetic_busi_madgnet
+🎯 Target: 175 benign + 89 malignant = 264 total
+💻 Device: cuda
+Initialized Conditional GAN on cuda
+Generator parameters: 4,462,426
+Discriminator parameters: 11,214,629
+
+📥 Loading trained GAN...
+Loaded checkpoint: checkpoints/busi_gan_final.pth
+✅ GAN loaded successfully!
+
+🚀 Generating synthetic dataset...
+Generating synthetic dataset...
+Generating 175 benign samples...
+Generating 89 malignant samples...
+✅ Synthetic dataset generated!
+   Output directory: synthetic_busi_madgnet
+   Total samples: 264
+   Benign: 175, Malignant: 89
+   Dataset CSV: synthetic_busi_madgnet/synthetic_dataset.csv
+
+🎉 Success! Synthetic dataset generated at: synthetic_busi_madgnet
+📊 Generated 264 samples total
+📁 Ready for MADGNET training!
+
+📂 Directory structure:
+   synthetic_busi_madgnet/
+   ├── benign/
+   │   ├── image/ (175 images)
+   │   └── mask/ (175 masks)
+   ├── malignant/
+   │   ├── image/ (89 images)
+   │   └── mask/ (89 masks)
+   └── synthetic_dataset.csv
+🔬 MADGNET Training with Synthetic BUSI Data
+======================================================================
+📁 GAN Checkpoint: checkpoints/busi_gan_final.pth
+📁 Synthetic Directory: synthetic_busi_madgnet
+🎯 Synthetic Samples: 175 benign + 89 malignant
+🧠 MADGNET Epochs: 100
+💻 GPU: 0
+
+======================================================================
+🎨 STEP 1: GENERATING SYNTHETIC DATASET
+======================================================================
+
+🚀 Synthetic Data Generation
+Command: python generate_busi_synthetic_final.py --checkpoint checkpoints/busi_gan_final.pth --output_dir synthetic_busi_madgnet --num_benign 175 --num_malignant 89
+------------------------------------------------------------
+✅ Synthetic Data Generation completed successfully!
+
+✅ Synthetic dataset ready at: synthetic_busi_madgnet
+
+======================================================================
+🧠 STEP 2: TRAINING MADGNET ON COMBINED DATASET
+======================================================================
+📊 Training Data: BUSI training + Synthetic data
+🎯 Test Data: Original BUSI test only (fair evaluation)
+
+🚀 MADGNET Training on Combined Dataset
+Command: CUDA_VISIBLE_DEVICES=0 python IS2D_main.py --num_workers 4 --data_path dataset/BioMedicalDataset --save_path model_weights --train_data_type BUSI-Synthetic-Combined --test_data_type BUSI --synthetic_data_dir synthetic_busi_madgnet --final_epoch 100 --batch_size 4 --train
+------------------------------------------------------------
+❌ MADGNET Training on Combined Dataset failed with exit code 2
+
+❌ Pipeline failed. Check the logs above for details.

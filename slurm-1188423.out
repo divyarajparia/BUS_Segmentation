@@ -1,0 +1,14 @@
+    ==========================================
+    SLURM_JOB_ID = 1188423
+    SLURM_JOB_NODELIST = b09-09
+    TMPDIR = /tmp/SLURM_1188423
+    ==========================================
+    usage: synthetic_busi_gan.py [-h] [--mode {train,generate}]
+                                [--data_dir DATA_DIR] [--epochs EPOCHS]
+                                [--batch_size BATCH_SIZE] [--lr LR]
+                                [--noise_dim NOISE_DIM] [--checkpoint CHECKPOINT]
+                                [--checkpoint_dir CHECKPOINT_DIR]
+                                [--output_dir OUTPUT_DIR]
+                                [--num_benign NUM_BENIGN]
+                                [--num_malignant NUM_MALIGNANT]
+    synthetic_busi_gan.py: error: argument --batch_size: expected one argument

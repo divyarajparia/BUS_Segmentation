@@ -30,3 +30,5 @@ final_model_weights/
 
 # Datasets
 dataset/
+synthetic_busi_madgnet/
+training_samples/

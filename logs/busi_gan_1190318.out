@@ -1,0 +1,124 @@
+==========================================
+SLURM_JOB_ID = 1190318
+SLURM_JOB_NODELIST = e21-05
+TMPDIR = /tmp/SLURM_1190318
+==========================================
+Starting BUSI GAN training...
+Job ID: 1190318
+Node: e21-05
+Using device: cuda
+Loading BUSI dataset from: dataset/BioMedicalDataset/BUSI
+Loaded 647 samples from dataset/BioMedicalDataset/BUSI
+  Benign: 437, Malignant: 210
+Initialized Conditional GAN on cuda
+Generator parameters: 4,462,426
+Discriminator parameters: 11,214,629
+Training Conditional GAN for 100 epochs...
+Epoch 1/100 - D_Loss: 0.1769, G_Loss: 3.5247
+Epoch 2/100 - D_Loss: 0.0139, G_Loss: 5.0414
+Epoch 3/100 - D_Loss: 0.6763, G_Loss: 3.3592
+Epoch 4/100 - D_Loss: 0.6840, G_Loss: 2.6793
+Epoch 5/100 - D_Loss: 0.7450, G_Loss: 2.5076
+Epoch 6/100 - D_Loss: 0.8301, G_Loss: 2.1440
+Epoch 7/100 - D_Loss: 0.9587, G_Loss: 1.8326
+Epoch 8/100 - D_Loss: 1.0487, G_Loss: 1.5290
+Epoch 9/100 - D_Loss: 1.0554, G_Loss: 1.4909
+Epoch 10/100 - D_Loss: 1.0801, G_Loss: 1.3929
+Epoch 11/100 - D_Loss: 1.0463, G_Loss: 1.4600
+Epoch 12/100 - D_Loss: 1.0270, G_Loss: 1.4806
+Epoch 13/100 - D_Loss: 1.0594, G_Loss: 1.4912
+Epoch 14/100 - D_Loss: 1.1029, G_Loss: 1.4808
+Epoch 15/100 - D_Loss: 1.0778, G_Loss: 1.3345
+Epoch 16/100 - D_Loss: 1.0555, G_Loss: 1.5209
+Epoch 17/100 - D_Loss: 1.0248, G_Loss: 1.5303
+Epoch 18/100 - D_Loss: 1.0442, G_Loss: 1.6512
+Epoch 19/100 - D_Loss: 0.9997, G_Loss: 1.7515
+Epoch 20/100 - D_Loss: 1.0102, G_Loss: 1.7294
+Saved checkpoint: checkpoints/busi_gan_epoch_20.pth
+Epoch 21/100 - D_Loss: 0.9557, G_Loss: 1.8532
+Epoch 22/100 - D_Loss: 1.0693, G_Loss: 1.4857
+Epoch 23/100 - D_Loss: 1.0851, G_Loss: 1.5265
+Epoch 24/100 - D_Loss: 1.1017, G_Loss: 1.4684
+Epoch 25/100 - D_Loss: 1.1069, G_Loss: 1.4982
+Epoch 26/100 - D_Loss: 1.1160, G_Loss: 1.4590
+Epoch 27/100 - D_Loss: 1.1562, G_Loss: 1.3543
+Epoch 28/100 - D_Loss: 1.0968, G_Loss: 1.4529
+Epoch 29/100 - D_Loss: 1.1208, G_Loss: 1.4410
+Epoch 30/100 - D_Loss: 1.1290, G_Loss: 1.4337
+Epoch 31/100 - D_Loss: 1.0868, G_Loss: 1.4110
+Epoch 32/100 - D_Loss: 1.1197, G_Loss: 1.4443
+Epoch 33/100 - D_Loss: 1.0618, G_Loss: 1.4585
+Epoch 34/100 - D_Loss: 1.1312, G_Loss: 1.3795
+Epoch 35/100 - D_Loss: 1.0945, G_Loss: 1.3778
+Epoch 36/100 - D_Loss: 1.0455, G_Loss: 1.4778
+Epoch 37/100 - D_Loss: 1.1151, G_Loss: 1.4144
+Epoch 38/100 - D_Loss: 1.1315, G_Loss: 1.2659
+Epoch 39/100 - D_Loss: 1.1292, G_Loss: 1.2436
+Epoch 40/100 - D_Loss: 1.0861, G_Loss: 1.3599
+Saved checkpoint: checkpoints/busi_gan_epoch_40.pth
+Epoch 41/100 - D_Loss: 1.0691, G_Loss: 1.4519
+Epoch 42/100 - D_Loss: 1.0846, G_Loss: 1.3469
+Epoch 43/100 - D_Loss: 1.0796, G_Loss: 1.3202
+Epoch 44/100 - D_Loss: 1.0151, G_Loss: 1.4425
+Epoch 45/100 - D_Loss: 1.0483, G_Loss: 1.4941
+Epoch 46/100 - D_Loss: 1.0801, G_Loss: 1.4220
+Epoch 47/100 - D_Loss: 0.9776, G_Loss: 1.5756
+Epoch 48/100 - D_Loss: 1.1104, G_Loss: 1.4055
+Epoch 49/100 - D_Loss: 1.0425, G_Loss: 1.4119
+Epoch 50/100 - D_Loss: 1.0861, G_Loss: 1.3907
+Epoch 51/100 - D_Loss: 1.1037, G_Loss: 1.3392
+Epoch 52/100 - D_Loss: 1.0235, G_Loss: 1.3826
+Epoch 53/100 - D_Loss: 1.0136, G_Loss: 1.5185
+Epoch 54/100 - D_Loss: 1.0482, G_Loss: 1.4637
+Epoch 55/100 - D_Loss: 1.0543, G_Loss: 1.3919
+Epoch 56/100 - D_Loss: 1.0617, G_Loss: 1.3438
+Epoch 57/100 - D_Loss: 1.0635, G_Loss: 1.4329
+Epoch 58/100 - D_Loss: 1.0533, G_Loss: 1.4631
+Epoch 59/100 - D_Loss: 1.0437, G_Loss: 1.4365
+Epoch 60/100 - D_Loss: 1.0180, G_Loss: 1.3950
+Saved checkpoint: checkpoints/busi_gan_epoch_60.pth
+Epoch 61/100 - D_Loss: 0.9931, G_Loss: 1.4751
+Epoch 62/100 - D_Loss: 0.9566, G_Loss: 1.5380
+Epoch 63/100 - D_Loss: 0.9654, G_Loss: 1.5048
+Epoch 64/100 - D_Loss: 0.9281, G_Loss: 1.5767
+Epoch 65/100 - D_Loss: 0.9319, G_Loss: 1.6352
+Epoch 66/100 - D_Loss: 0.9615, G_Loss: 1.5996
+Epoch 67/100 - D_Loss: 0.9221, G_Loss: 1.6360
+Epoch 68/100 - D_Loss: 0.9026, G_Loss: 1.7048
+Epoch 69/100 - D_Loss: 0.9019, G_Loss: 1.6681
+Epoch 70/100 - D_Loss: 0.8656, G_Loss: 1.7482
+Epoch 71/100 - D_Loss: 0.8867, G_Loss: 1.7384
+Epoch 72/100 - D_Loss: 0.9324, G_Loss: 1.6978
+Epoch 73/100 - D_Loss: 0.8601, G_Loss: 1.6383
+Epoch 74/100 - D_Loss: 0.8549, G_Loss: 1.6701
+Epoch 75/100 - D_Loss: 0.7957, G_Loss: 1.8087
+Epoch 76/100 - D_Loss: 0.7682, G_Loss: 1.8367
+Epoch 77/100 - D_Loss: 0.7507, G_Loss: 1.9235
+Epoch 78/100 - D_Loss: 0.7547, G_Loss: 1.9951
+Epoch 79/100 - D_Loss: 0.7477, G_Loss: 1.9920
+Epoch 80/100 - D_Loss: 0.6870, G_Loss: 1.9988
+Saved checkpoint: checkpoints/busi_gan_epoch_80.pth
+Epoch 81/100 - D_Loss: 0.6825, G_Loss: 2.0545
+Epoch 82/100 - D_Loss: 0.6781, G_Loss: 2.1915
+Epoch 83/100 - D_Loss: 0.6032, G_Loss: 2.2265
+Epoch 84/100 - D_Loss: 0.6400, G_Loss: 2.2420
+Epoch 85/100 - D_Loss: 0.6059, G_Loss: 2.3011
+Epoch 86/100 - D_Loss: 0.5838, G_Loss: 2.3971
+Epoch 87/100 - D_Loss: 0.5262, G_Loss: 2.4326
+Epoch 88/100 - D_Loss: 0.5439, G_Loss: 2.4626
+Epoch 89/100 - D_Loss: 0.5464, G_Loss: 2.4407
+Epoch 90/100 - D_Loss: 0.4801, G_Loss: 2.5500
+Epoch 91/100 - D_Loss: 0.4428, G_Loss: 2.6442
+Epoch 92/100 - D_Loss: 0.4075, G_Loss: 2.7337
+Epoch 93/100 - D_Loss: 0.4437, G_Loss: 2.8314
+Epoch 94/100 - D_Loss: 0.3888, G_Loss: 2.7767
+Epoch 95/100 - D_Loss: 0.4384, G_Loss: 2.9792
+Epoch 96/100 - D_Loss: 0.4152, G_Loss: 2.8580
+Epoch 97/100 - D_Loss: 0.4256, G_Loss: 2.9360
+Epoch 98/100 - D_Loss: 0.3863, G_Loss: 2.9757
+Epoch 99/100 - D_Loss: 0.3996, G_Loss: 3.0582
+Epoch 100/100 - D_Loss: 0.3558, G_Loss: 2.9880
+Saved checkpoint: checkpoints/busi_gan_epoch_100.pth
+Saved checkpoint: checkpoints/busi_gan_final.pth
+✅ Training completed!
+Training completed!
