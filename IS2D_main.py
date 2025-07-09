@@ -49,6 +49,7 @@ if __name__=='__main__' :
                                                                                             'DSB2018', 'MonuSeg2018', 'ISIC2018', 'PH2', 'COVID19', 'COVID19_2', 'BUSI', 'STU', 'BUS-UCLM'])
 
     parser.add_argument('--num_workers', type=int, default=4, help='number of workers')
+    parser.add_argument('--batch_size', type=int, default=4, help='batch size for training')
     parser.add_argument('--save_path', type=str, default='model_weights')
     parser.add_argument('--train', default=False, action='store_true')
     parser.add_argument('--seed_fix', default=False, action='store_true')
