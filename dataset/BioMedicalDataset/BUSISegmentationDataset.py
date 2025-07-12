@@ -54,10 +54,16 @@ class BUSISegmentationDataset(Dataset):
         image = Image.open(image_path).convert('L')
         label = Image.open(label_path).convert('L')
 
-        if self.transform:
+        if self.transform is not None or self.target_transform is not None:
             seed = random.randint(0, 2 ** 32)
-            self._set_seed(seed); image = self.transform(image)
-            self._set_seed(seed); label = self.target_transform(label)
+            
+            if self.transform is not None:
+                self._set_seed(seed)
+                image = self.transform(image)
+                
+            if self.target_transform is not None:
+                self._set_seed(seed)
+                label = self.target_transform(label)
 
         label[label >= 0.5] = 1; label[label < 0.5] = 0
 
