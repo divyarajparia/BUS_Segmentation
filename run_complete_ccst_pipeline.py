@@ -97,10 +97,10 @@ def main():
     parser = argparse.ArgumentParser(description='Run complete CCST pipeline')
     parser.add_argument('--busi-path', type=str,
                        default='dataset/BioMedicalDataset/BUSI',
-                       help='Path to BUSI dataset')
+                       help='Path to BUSI dataset (style source)')
     parser.add_argument('--bus-uclm-path', type=str,
                        default='dataset/BioMedicalDataset/BUS-UCLM',
-                       help='Path to BUS-UCLM dataset')
+                       help='Path to BUS-UCLM dataset (content source)')
     parser.add_argument('--batch-size', type=int, default=8,
                        help='Batch size for training')
     parser.add_argument('--epochs', type=int, default=100,
@@ -129,8 +129,9 @@ def main():
     print("🎯 CCST Complete Pipeline")
     print("=" * 50)
     print(f"Configuration:")
-    print(f"  BUSI path: {args.busi_path}")
-    print(f"  BUS-UCLM path: {args.bus_uclm_path}")
+    print(f"  BUSI path (style): {args.busi_path}")
+    print(f"  BUS-UCLM path (content): {args.bus_uclm_path}")
+    print(f"  Direction: Extract BUSI style → Apply to BUS-UCLM")
     print(f"  Batch size: {args.batch_size}")
     print(f"  Epochs: {args.epochs}")
     print(f"  Learning rate: {args.lr}")
@@ -161,8 +162,10 @@ def main():
     # Step 1: Generate CCST-augmented data
     if not args.skip_generation:
         if not run_command(
-            f"python ccst_exact_replication.py",
-            "Step 1: Generating CCST-augmented data"
+            f"python ccst_exact_replication.py "
+            f"--source_dataset '{args.bus_uclm_path}' "
+            f"--target_dataset '{args.busi_path}'",
+            "Step 1: Generating CCST-augmented data (BUSI style → BUS-UCLM content)"
         ):
             success = False
     else:

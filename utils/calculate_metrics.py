@@ -510,13 +510,65 @@ def F1Score_Calculator(precision_per_class, recall_per_class, num_classes=6, eps
 
 
 def IoU_Calculator(cfm_per_class, num_classes=6, eps=0.0001):
-    iou_per_class = []
+    iou_per_class = list()
+    for i in range(num_classes):
+        iou_per_class.append(cfm_per_class[i][i] / (cfm_per_class[i].sum() + cfm_per_class[:, i].sum() - cfm_per_class[i][i] + eps))
 
-    for class_idx in range(num_classes):
-        TP = cfm_per_class['TP'][class_idx]
-        FP = cfm_per_class['FP'][class_idx]
-        FN = cfm_per_class['FN'][class_idx]
+    miou = np.mean(iou_per_class)
 
-        iou_per_class.append((TP + eps) / (TP + FP + FN + eps))
+    return miou, iou_per_class
 
-    return iou_per_class
+# ============================================================================
+# Wrapper Functions for Backward Compatibility
+# ============================================================================
+
+def calculate_dice(pred, true):
+    """Calculate Dice coefficient - wrapper for existing DSC function"""
+    # Initialize the metrics calculator with DSC
+    calculator = BMIS_Metrics_Calculator(['DSC'])
+    metrics_dict = calculator.get_metrics_dict(pred, true)
+    return metrics_dict['DSC']
+
+def calculate_iou(pred, true):
+    """Calculate IoU - wrapper for existing IoU function"""
+    # Initialize the metrics calculator with IoU
+    calculator = BMIS_Metrics_Calculator(['IoU'])
+    metrics_dict = calculator.get_metrics_dict(pred, true)
+    return metrics_dict['IoU']
+
+def calculate_hausdorff(pred, true):
+    """Calculate Hausdorff distance between predicted and true masks"""
+    import torch
+    from scipy.spatial.distance import directed_hausdorff
+    
+    # Convert tensors to numpy if needed
+    if torch.is_tensor(pred):
+        pred = pred.squeeze().detach().cpu().numpy()
+    if torch.is_tensor(true):
+        true = true.squeeze().detach().cpu().numpy()
+    
+    # Ensure binary masks
+    pred = (pred >= 0.5).astype(np.uint8)
+    true = (true >= 0.5).astype(np.uint8)
+    
+    # Handle edge cases
+    if pred.sum() == 0 and true.sum() == 0:
+        return 0.0  # Both empty - perfect match
+    if pred.sum() == 0 or true.sum() == 0:
+        return float('inf')  # One empty, one not - worst case
+    
+    try:
+        # Get boundary points
+        pred_points = np.column_stack(np.where(pred > 0))
+        true_points = np.column_stack(np.where(true > 0))
+        
+        # Calculate directed Hausdorff distances
+        h1 = directed_hausdorff(pred_points, true_points)[0]
+        h2 = directed_hausdorff(true_points, pred_points)[0]
+        
+        # Return maximum (symmetric Hausdorff distance)
+        return max(h1, h2)
+    
+    except Exception as e:
+        # Fallback: return large value for errors
+        return 100.0

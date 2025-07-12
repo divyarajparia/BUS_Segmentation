@@ -337,10 +337,15 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
     """
     Run the complete CCST pipeline for Option 1: Domain Adaptation
     
+    CCST Direction (Updated):
+    - Extract style from BUSI (target_dataset)
+    - Apply BUSI style to BUS-UCLM images (source_dataset)
+    - Result: BUS-UCLM images that look like BUSI
+    
     Args:
-        source_dataset: Path to source dataset (BUSI)
+        source_dataset: Path to source dataset (BUS-UCLM for content)
         source_csv: CSV file for source dataset
-        target_dataset: Path to target dataset (BUS-UCLM)
+        target_dataset: Path to target dataset (BUSI for style extraction)
         target_csv: CSV file for target dataset
         output_dir: Directory to save styled images
         K: Number of clients for style (K=1 for overall domain style)
@@ -348,17 +353,18 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
     """
     
     print("🚀 Starting CCST Pipeline - Option 1: Domain Adaptation")
+    print("🎨 Direction: Extract BUSI style → Apply to BUS-UCLM content")
     print("=" * 60)
     
-    # Step 1: Extract target domain style
-    print("\n📊 Step 1: Extracting target domain style...")
+    # Step 1: Extract target domain style (BUSI style)
+    print(f"\n📊 Step 1: Extracting BUSI style from {target_dataset}...")
     style_extractor = CCSTStyleExtractor(device=device)
     target_style = style_extractor.extract_overall_domain_style(
         target_dataset, target_csv, J_samples=J_samples
     )
     
-    # Step 2: Apply style transfer to source dataset
-    print("\n🎨 Step 2: Applying style transfer to source dataset...")
+    # Step 2: Apply BUSI style to BUS-UCLM content
+    print(f"\n🎨 Step 2: Applying BUSI style to BUS-UCLM content from {source_dataset}...")
     
     # Image transforms - Convert grayscale to 3-channel RGB for VGG19
     transform = transforms.Compose([
@@ -378,10 +384,10 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
     )
     
     # Process all images
-    print(f"   Processing {len(ccst_dataset)} images...")
+    print(f"   Processing {len(ccst_dataset)} BUS-UCLM images with BUSI style...")
     
     styled_samples = []
-    for idx in tqdm(range(len(ccst_dataset)), desc="Applying style transfer"):
+    for idx in tqdm(range(len(ccst_dataset)), desc="Applying BUSI style to BUS-UCLM"):
         try:
             result = ccst_dataset[idx]
             styled_samples.append({
@@ -393,31 +399,37 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
             continue
     
     # Step 3: Create CSV for styled dataset
-    print("\n📋 Step 3: Creating styled dataset CSV...")
+    print("\n📋 Step 3: Creating BUSI-styled BUS-UCLM dataset CSV...")
     
     styled_df = pd.DataFrame(styled_samples)
     styled_csv_path = os.path.join(output_dir, 'styled_dataset.csv')
     styled_df.to_csv(styled_csv_path, index=False)
     
     print(f"   ✅ Created styled dataset CSV: {styled_csv_path}")
-    print(f"   📊 Total styled samples: {len(styled_samples)}")
+    print(f"   📊 Total BUSI-styled BUS-UCLM samples: {len(styled_samples)}")
     
     # Step 4: Generate summary
     print("\n📈 Step 4: CCST Pipeline Summary")
     print("=" * 60)
-    print(f"✅ Source dataset: {source_dataset}")
-    print(f"✅ Target dataset: {target_dataset}")
+    print(f"✅ Style source (BUSI): {target_dataset}")
+    print(f"✅ Content source (BUS-UCLM): {source_dataset}")
     print(f"✅ Style extraction samples: {J_samples if J_samples else 'All'}")
-    print(f"✅ Styled images saved to: {output_dir}")
+    print(f"✅ BUSI-styled images saved to: {output_dir}")
     print(f"✅ Styled dataset CSV: {styled_csv_path}")
-    print(f"✅ Total styled samples: {len(styled_samples)}")
+    print(f"✅ Total BUSI-styled BUS-UCLM samples: {len(styled_samples)}")
     
-    print("\n🎯 Next Steps:")
-    print("1. Use the styled dataset for training with original BUSI data")
-    print("2. Expected performance improvement based on CCST paper:")
-    print("   - Dice Score: +9.16% improvement")
-    print("   - IoU: +9.46% improvement")
-    print("   - Hausdorff Distance: -17.28% improvement")
+    print(f"\n🎯 Training Data Summary:")
+    print(f"   Original BUSI training: ~400 images")
+    print(f"   BUSI-styled BUS-UCLM: {len(styled_samples)} images")
+    print(f"   Total BUSI-style training data: ~{400 + len(styled_samples)} images")
+    
+    print(f"\n🎯 Next Steps:")
+    print(f"1. Train with: Original BUSI + BUSI-styled BUS-UCLM")
+    print(f"2. Test on: Original BUSI test set")
+    print(f"3. Expected improvement based on CCST paper:")
+    print(f"   - Dice Score: +9.16% improvement")
+    print(f"   - IoU: +9.46% improvement")
+    print(f"   - Hausdorff Distance: -17.28% improvement")
     
     return styled_csv_path, len(styled_samples)
 
@@ -428,14 +440,14 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
 def main():
     parser = argparse.ArgumentParser(description='CCST Style Transfer Pipeline')
     parser.add_argument('--source_dataset', type=str, 
-                       default='dataset/BioMedicalDataset/BUSI',
-                       help='Path to source dataset (BUSI)')
+                       default='dataset/BioMedicalDataset/BUS-UCLM',
+                       help='Path to source dataset (BUS-UCLM for content)')
     parser.add_argument('--source_csv', type=str, 
                        default='train_frame.csv',
                        help='CSV file for source dataset')
     parser.add_argument('--target_dataset', type=str, 
-                       default='dataset/BioMedicalDataset/BUS-UCLM',
-                       help='Path to target dataset (BUS-UCLM)')
+                       default='dataset/BioMedicalDataset/BUSI',
+                       help='Path to target dataset (BUSI for style extraction)')
     parser.add_argument('--target_csv', type=str, 
                        default='train_frame.csv',
                        help='CSV file for target dataset')
