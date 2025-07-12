@@ -168,9 +168,10 @@ class CCSTStyleExtractor:
             # Extract content features
             content_features = self.encoder(content_image)
             
-            # Create style features from style dictionary
-            style_mean = style_dict['mean'].to(self.device)
-            style_std = style_dict['std'].to(self.device)
+            # Create style features from style dictionary - ensure same device
+            device = content_features.device
+            style_mean = style_dict['mean'].to(device)
+            style_std = style_dict['std'].to(device)
             
             # Expand style to match content dimensions
             _, _, h, w = content_features.shape
@@ -303,9 +304,10 @@ class CCSTDataset(Dataset):
         if tensor.dim() == 3:
             # For 3-channel tensors, denormalize and convert to grayscale
             if tensor.shape[0] == 3:
-                # Denormalize RGB tensor
-                mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
-                std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+                # Denormalize RGB tensor - ensure tensors are on same device
+                device = tensor.device
+                mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(3, 1, 1)
+                std = torch.tensor([0.229, 0.224, 0.225], device=device).view(3, 1, 1)
                 tensor = tensor * std + mean
                 # Convert to grayscale by taking mean across channels
                 tensor = tensor.mean(dim=0, keepdim=True)
