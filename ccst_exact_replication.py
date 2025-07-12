@@ -93,11 +93,12 @@ class CCSTStyleExtractor:
             df = df.sample(n=J_samples, random_state=42)
             print(f"   🔀 Randomly selected {J_samples} samples for style extraction")
         
-        # Image transforms
+        # Image transforms - Convert grayscale to 3-channel RGB for VGG19
         transform = transforms.Compose([
             transforms.Resize((256, 256)),
+            transforms.Grayscale(num_output_channels=3),  # Convert to 3-channel RGB
             transforms.ToTensor(),
-            transforms.Normalize([0.485], [0.229])  # ImageNet normalization for single channel
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # ImageNet normalization for RGB
         ])
         
         all_features = []
@@ -134,7 +135,7 @@ class CCSTStyleExtractor:
                     print(f"   ✅ Found image: {image_path}")
                 
                 # Load and transform image
-                image = Image.open(image_path).convert('L')
+                image = Image.open(image_path).convert('L')  # Load as grayscale first
                 image_tensor = transform(image).unsqueeze(0).to(self.device)
                 
                 # Extract features
@@ -300,18 +301,24 @@ class CCSTDataset(Dataset):
         """Convert tensor to PIL Image with proper denormalization"""
         # Handle different tensor shapes
         if tensor.dim() == 3:
-            # Remove channel dimension if it's 1
-            if tensor.shape[0] == 1:
-                tensor = tensor.squeeze(0)
-            elif tensor.shape[0] == 3:
-                # For 3-channel tensors, take first channel after denormalization
-                # Denormalize first
-                tensor = tensor * 0.229 + 0.485  # Reverse ImageNet normalization
-                tensor = tensor[0]  # Take first channel
+            # For 3-channel tensors, denormalize and convert to grayscale
+            if tensor.shape[0] == 3:
+                # Denormalize RGB tensor
+                mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+                std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+                tensor = tensor * std + mean
+                # Convert to grayscale by taking mean across channels
+                tensor = tensor.mean(dim=0, keepdim=True)
+            elif tensor.shape[0] == 1:
+                # Already single channel
+                pass
         
         # Ensure tensor is 2D
+        if tensor.dim() == 3 and tensor.shape[0] == 1:
+            tensor = tensor.squeeze(0)
+        
         if tensor.dim() != 2:
-            raise ValueError(f"Expected 2D tensor, got {tensor.dim()}D")
+            raise ValueError(f"Expected 2D tensor after processing, got {tensor.dim()}D")
         
         # Convert to numpy and scale to [0, 255]
         tensor = torch.clamp(tensor, 0, 1)
@@ -351,11 +358,12 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
     # Step 2: Apply style transfer to source dataset
     print("\n🎨 Step 2: Applying style transfer to source dataset...")
     
-    # Image transforms
+    # Image transforms - Convert grayscale to 3-channel RGB for VGG19
     transform = transforms.Compose([
         transforms.Resize((256, 256)),
+        transforms.Grayscale(num_output_channels=3),  # Convert to 3-channel RGB
         transforms.ToTensor(),
-        transforms.Normalize([0.485], [0.229])  # ImageNet normalization
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # ImageNet normalization for RGB
     ])
     
     # Create CCST dataset
