@@ -1,0 +1,69 @@
+#!/bin/bash
+#SBATCH --job-name=ccst_domain_adaptation
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --time=8:00:00
+#SBATCH --output=ccst_output_%j.out
+#SBATCH --error=ccst_error_%j.err
+
+# ================================================================
+# CCST Domain Adaptation: BUS-UCLM → BUSI Style Transfer
+# ================================================================
+
+echo "🚀 CCST Domain Adaptation Pipeline"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURM_NODELIST"
+echo "Start time: $(date)"
+
+# ================================================================
+# TODO: UPDATE THESE PATHS FOR YOUR SERVER
+# ================================================================
+PROJECT_DIR="/path/to/your/BUS_Segmentation"  # UPDATE THIS
+BUSI_PATH="$PROJECT_DIR/dataset/BioMedicalDataset/BUSI"
+BUS_UCLM_PATH="$PROJECT_DIR/dataset/BioMedicalDataset/BUS-UCLM"
+
+# ================================================================
+# Environment Setup (UPDATE FOR YOUR SERVER)
+# ================================================================
+module load python/3.8  # UPDATE VERSION
+module load cuda/11.8   # UPDATE VERSION
+module load cudnn/8.6   # UPDATE VERSION
+
+# Activate virtual environment (if using)
+# source /path/to/your/venv/bin/activate
+
+# Navigate to project
+cd $PROJECT_DIR
+
+# ================================================================
+# Step 1: Generate CCST-Augmented Data
+# ================================================================
+echo ""
+echo "🎨 Step 1: Generating CCST-Augmented Data"
+echo "========================================="
+
+python generate_ccst_data_only.py \
+    --busi-path "$BUSI_PATH" \
+    --bus-uclm-path "$BUS_UCLM_PATH" \
+    --style-type "overall" \
+    --K 1
+
+# ================================================================
+# Step 2: Train with CCST Data
+# ================================================================
+echo ""
+echo "🎯 Step 2: Training with CCST Data"
+echo "=================================="
+
+python train_with_ccst_data.py \
+    --ccst-augmented-path "$PROJECT_DIR/dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented" \
+    --original-busi-path "$BUSI_PATH" \
+    --num-epochs 100 \
+    --batch-size 8 \
+    --lr 0.001
+
+echo ""
+echo "✅ CCST Pipeline Completed!"
+echo "End time: $(date)"
+echo "Results in: $PROJECT_DIR/dataset/BioMedicalDataset/CCST-Results/"
+echo "Model saved as: best_ccst_model.pth" 

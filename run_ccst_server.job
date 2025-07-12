@@ -1,0 +1,63 @@
+#!/bin/bash
+#SBATCH --job-name=ccst_pipeline
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=32GB
+#SBATCH --time=12:00:00
+#SBATCH --output=logs/ccst_pipeline_%j.out
+#SBATCH --error=logs/ccst_pipeline_%j.err
+
+# CCST Pipeline for BUS-UCLM → BUSI Domain Adaptation
+# This job runs the complete CCST workflow:
+# 1. Generate CCST-augmented data
+# 2. Train model with augmented data
+# 3. Evaluate results
+
+echo "🚀 Starting CCST Pipeline on Server"
+echo "=================================="
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $SLURM_NODELIST"
+echo "GPU: $CUDA_VISIBLE_DEVICES"
+echo "Time: $(date)"
+
+# Load modules (adjust based on your server)
+module load python/3.8
+module load cuda/11.8
+module load cudnn/8.6
+
+# Activate virtual environment (if using)
+# source /path/to/your/venv/bin/activate
+
+# Navigate to project directory
+cd /path/to/your/BUS_Segmentation/
+
+# Create logs directory
+mkdir -p logs
+
+echo ""
+echo "📊 Step 1: Generating CCST-Augmented Data"
+echo "=========================================="
+python ccst_exact_replication.py
+
+echo ""
+echo "🧪 Step 2: Testing Implementation"
+echo "================================="
+python test_ccst_exact_replication.py
+
+echo ""
+echo "🎯 Step 3: Training with CCST Data"
+echo "=================================="
+python train_with_ccst_data.py \
+    --ccst-augmented-path "dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented" \
+    --original-busi-path "dataset/BioMedicalDataset/BUSI" \
+    --num-epochs 100 \
+    --batch-size 8 \
+    --lr 0.001
+
+echo ""
+echo "✅ CCST Pipeline Completed!"
+echo "=========================="
+echo "Results saved to: dataset/BioMedicalDataset/CCST-Results/"
+echo "Model saved as: best_ccst_model.pth"
+echo "End time: $(date)" 
