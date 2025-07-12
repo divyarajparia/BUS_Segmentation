@@ -111,15 +111,17 @@ def train_epoch(model, train_loader, optimizer, criterion, device, epoch):
         masks = masks.to(device)
         
         optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, masks)
+        outputs = model(images, mode='train')
+        # outputs is a list of 4 stages; each stage is [map, dist, boundary]
+        map_output = outputs[3][0]  # Use the highest resolution map for supervision
+        loss = criterion(map_output, masks)
         
         loss.backward()
         optimizer.step()
         
         # Calculate metrics
         with torch.no_grad():
-            pred_masks = torch.sigmoid(outputs) > 0.5
+            pred_masks = torch.sigmoid(map_output) > 0.5
             dice = calculate_dice(pred_masks, masks)
             iou = calculate_iou(pred_masks, masks)
             
@@ -153,10 +155,11 @@ def validate_epoch(model, val_loader, criterion, device):
             images = images.to(device)
             masks = masks.to(device)
             
-            outputs = model(images)
-            loss = criterion(outputs, masks)
+            outputs = model(images, mode='train')
+            map_output = outputs[3][0]
+            loss = criterion(map_output, masks)
             
-            pred_masks = torch.sigmoid(outputs) > 0.5
+            pred_masks = torch.sigmoid(map_output) > 0.5
             dice = calculate_dice(pred_masks, masks)
             iou = calculate_iou(pred_masks, masks)
             
@@ -190,7 +193,7 @@ def evaluate_model(model, test_loader, device):
             images = images.to(device)
             masks = masks.to(device)
             
-            outputs = model(images)
+            outputs = model(images, mode='test')
             pred_masks = torch.sigmoid(outputs) > 0.5
             
             # Calculate metrics for each sample in batch
@@ -275,6 +278,7 @@ def main():
     # Initialize model
     model = MFMSNet(num_classes=1).to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    # Use BCEWithLogitsLoss on the final map output (output[3][0]) as done in existing IS2D infrastructure
     criterion = nn.BCEWithLogitsLoss()
     
     # Training loop
