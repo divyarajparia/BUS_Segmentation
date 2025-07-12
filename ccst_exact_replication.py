@@ -381,12 +381,21 @@ class CCSTLocalStyleTransfer:
         ])
         
         # Reverse transform for saving
-        reverse_transform = transforms.Compose([
-            transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225], 
-                               std=[1/0.229, 1/0.224, 1/0.225]),
-            transforms.Lambda(lambda x: x[0:1, :, :]),  # Take first channel
-            transforms.ToPILImage()
-        ])
+        def reverse_transform_fn(tensor):
+            # Denormalize 3-channel tensor
+            denorm_tensor = transforms.Normalize(
+                mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225], 
+                std=[1/0.229, 1/0.224, 1/0.225]
+            )(tensor)
+            
+            # Take first channel to get back to single channel
+            single_channel = denorm_tensor[0:1, :, :]
+            
+            # Clamp values to [0, 1] range
+            single_channel = torch.clamp(single_channel, 0, 1)
+            
+            # Convert to PIL Image
+            return transforms.ToPILImage()(single_channel)
         
         # Algorithm 1 implementation
         augmented_dataset = []  # D_Cn = []
@@ -473,7 +482,7 @@ class CCSTLocalStyleTransfer:
                     # Apply style transfer (Equation 5)
                     with torch.no_grad():
                         styled_tensor = self.adain_transfer(image_tensor, style_mean, style_std)
-                        styled_image = reverse_transform(styled_tensor.squeeze(0).cpu())
+                        styled_image = reverse_transform_fn(styled_tensor.squeeze(0).cpu())
                     
                     # Save styled image
                     if output_path:
