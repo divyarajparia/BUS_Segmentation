@@ -7,6 +7,11 @@ This implementation exactly follows:
 - Three-stage workflow: Style computation → Style bank broadcasting → Style transfer
 - Both single image style and overall domain style
 - Augmentation level K parameter
+
+Dataset Format Support:
+- BUSI format: CSV "benign (1).png" → benign/image/benign (1).png
+- BUS-UCLM format: CSV "benign image.png" → benign/images/image.png
+- Uses TRAINING DATA ONLY for style extraction and transfer
 """
 
 import os
@@ -84,6 +89,19 @@ class CCSTStyleExtractor:
         
         # Load dataset
         df = pd.read_csv(os.path.join(dataset_path, csv_file))
+        print(f"   📊 Loaded {len(df)} images from {csv_file}")
+        
+        # Debug: Show first few entries to understand format
+        if len(df) > 0:
+            sample_image_path = df.image_path.iloc[0]
+            print(f"   🔍 Sample image path format: '{sample_image_path}'")
+            if ' ' in sample_image_path:
+                if '(' in sample_image_path:
+                    print(f"   📝 Detected BUSI format")
+                else:
+                    print(f"   📝 Detected BUS-UCLM format")
+            else:
+                print(f"   📝 Detected fallback format")
         
         # Transform for VGG
         transform = transforms.Compose([
@@ -102,11 +120,18 @@ class CCSTStyleExtractor:
                 
                 # Handle different dataset formats
                 if ' ' in image_filename:
-                    # BUSI format: "benign (1).png"
-                    class_type = image_filename.split()[0]
-                    image_path = os.path.join(dataset_path, class_type, 'image', image_filename)
+                    # Check if it's BUSI format: "benign (1).png" vs BUS-UCLM format: "benign image.png"
+                    if '(' in image_filename:
+                        # BUSI format: "benign (1).png"
+                        class_type = image_filename.split()[0]
+                        image_path = os.path.join(dataset_path, class_type, 'image', image_filename)
+                    else:
+                        # BUS-UCLM format: "benign image.png"
+                        class_type = image_filename.split()[0]  # 'benign' or 'malignant'
+                        image_name = image_filename.split()[1]  # 'image.png'
+                        image_path = os.path.join(dataset_path, class_type, 'images', image_name)
                 else:
-                    # BUS-UCLM format: "benign/image.png"
+                    # Fallback format
                     image_path = os.path.join(dataset_path, image_filename)
                 
                 if not os.path.exists(image_path):
@@ -157,11 +182,18 @@ class CCSTStyleExtractor:
             
             # Handle different dataset formats
             if ' ' in image_filename:
-                # BUSI format
-                class_type = image_filename.split()[0]
-                image_path = os.path.join(dataset_path, class_type, 'image', image_filename)
+                # Check if it's BUSI format: "benign (1).png" vs BUS-UCLM format: "benign image.png"
+                if '(' in image_filename:
+                    # BUSI format: "benign (1).png"
+                    class_type = image_filename.split()[0]
+                    image_path = os.path.join(dataset_path, class_type, 'image', image_filename)
+                else:
+                    # BUS-UCLM format: "benign image.png"
+                    class_type = image_filename.split()[0]  # 'benign' or 'malignant'
+                    image_name = image_filename.split()[1]  # 'image.png'
+                    image_path = os.path.join(dataset_path, class_type, 'images', image_name)
             else:
-                # BUS-UCLM format
+                # Fallback format
                 image_path = os.path.join(dataset_path, image_filename)
             
             if os.path.exists(image_path):
@@ -366,12 +398,21 @@ class CCSTLocalStyleTransfer:
             
             # Load original image I_i
             if ' ' in image_filename:
-                # BUSI format
-                class_type = image_filename.split()[0]
-                src_image_path = os.path.join(client_dataset_path, class_type, 'image', image_filename)
-                src_mask_path = os.path.join(client_dataset_path, class_type, 'mask', mask_filename)
+                # Check if it's BUSI format: "benign (1).png" vs BUS-UCLM format: "benign image.png"
+                if '(' in image_filename:
+                    # BUSI format: "benign (1).png"
+                    class_type = image_filename.split()[0]
+                    src_image_path = os.path.join(client_dataset_path, class_type, 'image', image_filename)
+                    src_mask_path = os.path.join(client_dataset_path, class_type, 'mask', mask_filename)
+                else:
+                    # BUS-UCLM format: "benign image.png"
+                    class_type = image_filename.split()[0]  # 'benign' or 'malignant'
+                    image_name = image_filename.split()[1]  # 'image.png'
+                    mask_name = mask_filename.split()[1]   # 'mask.png'
+                    src_image_path = os.path.join(client_dataset_path, class_type, 'images', image_name)
+                    src_mask_path = os.path.join(client_dataset_path, class_type, 'masks', mask_name)
             else:
-                # BUS-UCLM format
+                # Fallback format
                 src_image_path = os.path.join(client_dataset_path, image_filename)
                 src_mask_path = os.path.join(client_dataset_path, mask_filename)
                 class_type = image_filename.split('/')[0]
@@ -493,9 +534,9 @@ def run_ccst_pipeline(busi_path, bus_uclm_path, output_base_path,
     
     style_extractor = CCSTStyleExtractor(device=device)
     
-    # Extract styles from both "clients"
+    # Extract styles from both "clients" (TRAINING DATA ONLY)
     if style_type == 'overall':
-        print("   Extracting overall domain styles...")
+        print("   Extracting overall domain styles from TRAINING data...")
         busi_style = style_extractor.extract_overall_domain_style(
             busi_path, 'train_frame.csv'
         )
@@ -503,7 +544,7 @@ def run_ccst_pipeline(busi_path, bus_uclm_path, output_base_path,
             bus_uclm_path, 'train_frame.csv'
         )
     else:
-        print("   Extracting single image style banks...")
+        print("   Extracting single image style banks from TRAINING data...")
         busi_style = style_extractor.extract_single_image_style_bank(
             busi_path, 'train_frame.csv', J=J
         )
@@ -541,9 +582,9 @@ def run_ccst_pipeline(busi_path, bus_uclm_path, output_base_path,
     
     style_transfer = CCSTLocalStyleTransfer(device=device)
     
-    # Apply Algorithm 1 to BUS-UCLM (transfer to BUSI style)
+    # Apply Algorithm 1 to BUS-UCLM TRAINING data (transfer to BUSI style)
     bus_uclm_output_path = os.path.join(output_base_path, 'BUS-UCLM-CCST-augmented')
-    print(f"\n   Applying Algorithm 1 to BUS-UCLM client...")
+    print(f"\n   Applying Algorithm 1 to BUS-UCLM client (TRAINING data only)...")
     bus_uclm_augmented = style_transfer.local_cross_client_style_transfer(
         client_dataset_path=bus_uclm_path,
         global_style_bank=global_style_bank,
@@ -554,9 +595,9 @@ def run_ccst_pipeline(busi_path, bus_uclm_path, output_base_path,
         csv_file='train_frame.csv'
     )
     
-    # Apply Algorithm 1 to BUSI (transfer to BUS-UCLM style)  
+    # Apply Algorithm 1 to BUSI TRAINING data (transfer to BUS-UCLM style)  
     busi_output_path = os.path.join(output_base_path, 'BUSI-CCST-augmented')
-    print(f"\n   Applying Algorithm 1 to BUSI client...")
+    print(f"\n   Applying Algorithm 1 to BUSI client (TRAINING data only)...")
     busi_augmented = style_transfer.local_cross_client_style_transfer(
         client_dataset_path=busi_path,
         global_style_bank=global_style_bank,
