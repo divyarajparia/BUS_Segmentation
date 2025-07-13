@@ -20,6 +20,7 @@ from tqdm import tqdm
 import argparse
 import random
 from collections import defaultdict
+from torchvision.transforms.functional import to_pil_image
 
 # Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -276,7 +277,7 @@ class CCSTDataset(Dataset):
             stylized_tensor = self.style_extractor.apply_style_transfer(image_tensor, self.target_style_dict)
             
             # Convert back to PIL
-            stylized_image = self.tensor_to_pil(stylized_tensor.squeeze(0))
+            stylized_image = to_pil_image(stylized_tensor.squeeze(0).cpu().clamp(0,1))
         else:
             stylized_image = image
         
@@ -294,10 +295,8 @@ class CCSTDataset(Dataset):
 
         # Fix filename generation - masks should have _mask suffix
         base_image_name = os.path.splitext(os.path.basename(image_filename))[0]
-        base_mask_name = os.path.splitext(os.path.basename(mask_filename))[0]
-        
         styled_image_name = f"styled_{base_image_name}.png"
-        styled_mask_name  = f"styled_{base_mask_name}.png"
+        styled_mask_name  = f"styled_{base_image_name}_mask.png"
 
         styled_image_path = os.path.join(image_out_dir, styled_image_name)
         styled_mask_path  = os.path.join(mask_out_dir,  styled_mask_name)
@@ -313,37 +312,6 @@ class CCSTDataset(Dataset):
             'styled_image_path': styled_image_path,
             'styled_mask_path': styled_mask_path
         }
-    
-    def tensor_to_pil(self, tensor):
-        """Convert tensor to PIL Image with proper denormalization"""
-        # Handle different tensor shapes
-        if tensor.dim() == 3:
-            # For 3-channel tensors, denormalize and convert to grayscale
-            if tensor.shape[0] == 3:
-                # Denormalize RGB tensor - ensure tensors are on same device
-                device = tensor.device
-                mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(3, 1, 1)
-                std = torch.tensor([0.229, 0.224, 0.225], device=device).view(3, 1, 1)
-                tensor = tensor * std + mean
-                # Convert to grayscale by taking mean across channels
-                tensor = tensor.mean(dim=0, keepdim=True)
-            elif tensor.shape[0] == 1:
-                # Already single channel
-                pass
-        
-        # Ensure tensor is 2D
-        if tensor.dim() == 3 and tensor.shape[0] == 1:
-            tensor = tensor.squeeze(0)
-        
-        if tensor.dim() != 2:
-            raise ValueError(f"Expected 2D tensor after processing, got {tensor.dim()}D")
-        
-        # Convert to numpy and scale to [0, 255] with proper handling
-        tensor = tensor.cpu()  # Move to CPU first
-        tensor = torch.clamp(tensor, 0, 1)  # Clamp to valid range
-        np_image = (tensor.numpy() * 255).astype(np.uint8)
-        
-        return Image.fromarray(np_image, mode='L')
 
 # ============================================================================
 # Main CCST Pipeline
