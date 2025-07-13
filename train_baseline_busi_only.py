@@ -350,9 +350,9 @@ def main():
     
     print(f"\n✅ Training Completed!")
     print(f"📊 Final Test Results:")
-    print(f"  Dice Coefficient: {test_results['dice']['mean']:.4f} ± {test_results['dice']['std']:.4f}")
-    print(f"  IoU: {test_results['iou']['mean']:.4f} ± {test_results['iou']['std']:.4f}")
-    print(f"  Hausdorff Distance: {test_results['hausdorff']['mean']:.4f} ± {test_results['hausdorff']['std']:.4f}")
+    print(f"  Dice Coefficient: {test_results['dice']['mean']:.4f}")
+    print(f"  IoU: {test_results['iou']['mean']:.4f}")
+    print(f"  Hausdorff Distance: {test_results['hausdorff']['mean']:.4f}")
     print(f"📁 Model saved to: {args.save_path}")
     print(f"📁 Results saved to: {args.results_path}")
 

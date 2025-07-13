@@ -111,7 +111,7 @@ def create_dataloaders(ccst_augmented_path, original_busi_path, batch_size=8, nu
     
     return train_loader, val_loader, test_loader
 
-def train_model(model, train_loader, val_loader, device, num_epochs=100, lr=0.001):
+def train_model(model, train_loader, val_loader, device, *, save_path='best_ccst_model.pth', num_epochs=100, lr=0.001):
     """Train the segmentation model with CCST-augmented data"""
     
     print(f"\n🎯 Training model with CCST-augmented data...")
@@ -197,7 +197,7 @@ def train_model(model, train_loader, val_loader, device, num_epochs=100, lr=0.00
         # Save best model
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            torch.save(model.state_dict(), 'best_ccst_model.pth')
+            torch.save(model.state_dict(), save_path)
             print(f'   ✅ New best model saved! Val Loss: {best_val_loss:.4f}')
         
         scheduler.step()
@@ -272,6 +272,11 @@ def main():
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--device', type=str, default='auto', help='Device to use (auto/cuda/cpu)')
     parser.add_argument('--num-workers', type=int, default=4, help='Number of data loading workers')
+    # Optional paths so pipeline can override defaults without raising errors
+    parser.add_argument('--save-path', type=str, default='best_ccst_model.pth',
+                        help='Path to save best model weights (default: best_ccst_model.pth)')
+    parser.add_argument('--results-path', type=str, default='ccst_results.json',
+                        help='(Optional) Path to save results JSON – currently unused but accepted to avoid CLI errors')
     
     args = parser.parse_args()
     
@@ -334,13 +339,15 @@ def main():
     # Train model
     print(f"\n🎯 Starting training with CCST methodology...")
     training_history = train_model(
-        model, train_loader, val_loader, device, 
-        args.num_epochs, args.lr
+        model, train_loader, val_loader, device,
+        save_path=args.save_path,
+        num_epochs=args.num_epochs,
+        lr=args.lr
     )
     
     # Load best model and evaluate
     print(f"\n📊 Loading best model for final evaluation...")
-    model.load_state_dict(torch.load('best_ccst_model.pth'))
+    model.load_state_dict(torch.load(args.save_path))
     
     # Final evaluation on test set (original BUSI only)
     test_results = evaluate_model(model, test_loader, device)
@@ -357,7 +364,7 @@ def main():
     print(f"  Pixel Accuracy: {test_results['pixel_accuracy']:.4f}")
     print(f"  Mean IoU: {test_results['mean_iou']:.4f}")
     print(f"\nFiles saved:")
-    print(f"  Best model: best_ccst_model.pth")
+    print(f"  Best model: {args.save_path}")
     print(f"  Training history: ccst_training_history.json")
     print(f"\n✅ Model trained with CCST domain generalization methodology!")
 
