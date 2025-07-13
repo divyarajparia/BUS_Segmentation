@@ -309,14 +309,11 @@ class CCSTDataset(Dataset):
                 mask_path = os.path.join(self.source_dataset_path, class_type, 'mask', mask_filename)
             else:
                 # BUS-UCLM format: "benign SHST_011.png"
-                # CSV has "benign SHST_011.png" but actual files are "SHST_011.png"
-                # Both image and mask have same name in BUS-UCLM
                 class_type = image_filename.split()[0]
-                actual_filename = image_filename.split()[1]  # Extract "SHST_011.png"
-                
-                # BUS-UCLM has both image and mask with same filename
-                image_path = os.path.join(self.source_dataset_path, class_type, 'images', actual_filename)
-                mask_path = os.path.join(self.source_dataset_path, class_type, 'masks', actual_filename)
+                image_name = image_filename.split()[1]
+                mask_name = mask_filename.split()[1]  # This should be the same as image_name
+                image_path = os.path.join(self.source_dataset_path, class_type, 'images', image_name)
+                mask_path = os.path.join(self.source_dataset_path, class_type, 'masks', mask_name)
         else:
             # Fallback format
             image_path = os.path.join(self.source_dataset_path, image_filename)
@@ -327,9 +324,11 @@ class CCSTDataset(Dataset):
             image = Image.open(image_path).convert('L')
             mask = Image.open(mask_path).convert('L')
         except Exception as e:
-            print(f"   ⚠️ Error loading files for sample {idx}:")
-            print(f"      Image path: {image_path}")
-            print(f"      Mask path: {mask_path}")
+            print(f"   ⚠️ Error processing sample {idx}:")
+            print(f"      CSV image_path: {image_filename}")
+            print(f"      CSV mask_path: {mask_filename}")
+            print(f"      Constructed image_path: {image_path}")
+            print(f"      Constructed mask_path: {mask_path}")
             print(f"      Error: {e}")
             raise e
         
@@ -386,12 +385,7 @@ class CCSTDataset(Dataset):
         os.makedirs(mask_out_dir, exist_ok=True)
 
         # Fix filename generation - masks should have _mask suffix
-        # Extract base name from the actual filename (after space split)
-        if ' ' in image_filename:
-            base_image_name = os.path.splitext(image_filename.split()[1])[0]  # Get "SHST_011" from "benign SHST_011.png"
-        else:
-            base_image_name = os.path.splitext(os.path.basename(image_filename))[0]
-            
+        base_image_name = os.path.splitext(os.path.basename(image_filename))[0]
         styled_image_name = f"styled_{base_image_name}.png"
         styled_mask_name  = f"styled_{base_image_name}_mask.png"
 
