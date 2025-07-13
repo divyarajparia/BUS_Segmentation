@@ -281,6 +281,10 @@ class CCSTDataset(Dataset):
         else:
             stylized_image = image
         
+        # If style transfer failed to produce a valid image (all zeros), fall back to original image
+        if stylized_image.getextrema()[1] == 0:
+            stylized_image = image
+        
         # ------------------------------------------------------------------
         # Save styled image & mask following BUSI-style directory hierarchy:
         #   output_dir/benign/image/ styled_*.png
