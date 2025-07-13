@@ -99,9 +99,16 @@ class PrivacyPreservingStyleExtractor:
                         # Extract class from filename (e.g., "benign (1).png" or "benign SHST_011.png")
                         class_type = image_path_info.split()[0]
                         
-                        # Try both folder structures: BUSI uses "image", BUS-UCLM uses "images"
+                        # Handle different filename formats:
+                        # BUSI: "malignant (58).png" -> actual file: "malignant (58).png"
+                        # BUS-UCLM: "benign OSCU_016.png" -> actual file: "OSCU_016.png"
+                        
+                        # For BUSI: use full filename as-is
                         image_path_busi = os.path.join(dataset_dir, class_type, 'image', image_path_info)
-                        image_path_busuclm = os.path.join(dataset_dir, class_type, 'images', image_path_info)
+                        
+                        # For BUS-UCLM: strip class prefix from filename
+                        actual_image_filename = ' '.join(image_path_info.split()[1:])  # Remove first word (class)
+                        image_path_busuclm = os.path.join(dataset_dir, class_type, 'images', actual_image_filename)
                         
                         if os.path.exists(image_path_busi):
                             image_path = image_path_busi
@@ -388,17 +395,26 @@ class CCSTDatasetGenerator:
                         # Extract class from filename (e.g., "benign (1).png" or "benign SHST_011.png")
                         class_type = image_path_info.split()[0]
                         
-                        # Try both folder structures: BUSI uses "image/mask", BUS-UCLM uses "images/masks"
+                        # Handle different filename formats:
+                        # BUSI: "malignant (58).png" -> actual file: "malignant (58).png"
+                        # BUS-UCLM: "benign OSCU_016.png" -> actual file: "OSCU_016.png"
+                        
+                        # For BUSI: use full filename as-is
                         image_path_busi = os.path.join(source_dataset_dir, class_type, 'image', image_path_info)
                         mask_path_busi = os.path.join(source_dataset_dir, class_type, 'mask', mask_path_info)
-                        image_path_busuclm = os.path.join(source_dataset_dir, class_type, 'images', image_path_info)
-                        mask_path_busuclm = os.path.join(source_dataset_dir, class_type, 'masks', mask_path_info)
+                        
+                        # For BUS-UCLM: strip class prefix from filename
+                        actual_image_filename = ' '.join(image_path_info.split()[1:])  # Remove first word (class)
+                        actual_mask_filename = ' '.join(mask_path_info.split()[1:])    # Remove first word (class)
+                        image_path_busuclm = os.path.join(source_dataset_dir, class_type, 'images', actual_image_filename)
+                        mask_path_busuclm = os.path.join(source_dataset_dir, class_type, 'masks', actual_mask_filename)
                         
                         # Debug: Show what paths are being tried
                         if idx < 3:  # Only show first 3 for debugging
                             print(f"   🔍 Processing {image_path_info} (class: {class_type})")
-                            print(f"      Trying BUSI path: {image_path_busi}")
-                            print(f"      Trying BUS-UCLM path: {image_path_busuclm}")
+                            print(f"      BUSI format: {image_path_busi}")
+                            print(f"      BUS-UCLM format: {image_path_busuclm}")
+                            print(f"      Actual filename: {actual_image_filename}")
                         
                         if os.path.exists(image_path_busi) and os.path.exists(mask_path_busi):
                             image_path = image_path_busi
