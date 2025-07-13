@@ -117,6 +117,9 @@ def main():
                        help='Skip CCST training')
     parser.add_argument('--quick-test', action='store_true',
                        help='Run with reduced epochs for quick testing')
+    parser.add_argument('--ccst-augmented-path', type=str,
+                       default='dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented',
+                       help='Directory for CCST-augmented data (both generation output and training input)')
     
     args = parser.parse_args()
     
@@ -150,7 +153,7 @@ def main():
     create_output_directories()
     
     # Define paths
-    ccst_augmented_path = "dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented"
+    ccst_augmented_path = args.ccst_augmented_path
     baseline_model_path = "models/baseline_busi_only_model.pth"
     ccst_model_path = "models/ccst_domain_adaptation_model.pth"
     baseline_results_path = "results/baseline_results.json"
