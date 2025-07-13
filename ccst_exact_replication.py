@@ -280,13 +280,25 @@ class CCSTDataset(Dataset):
         else:
             stylized_image = image
         
-        # Save styled image and copy mask
-        styled_image_name = f"styled_{image_filename}"
-        styled_mask_name = f"styled_{mask_filename}"
-        
-        styled_image_path = os.path.join(self.output_dir, styled_image_name)
-        styled_mask_path = os.path.join(self.output_dir, styled_mask_name)
-        
+        # ------------------------------------------------------------------
+        # Save styled image & mask following BUSI-style directory hierarchy:
+        #   output_dir/benign/image/ styled_*.png
+        #   output_dir/benign/mask/  styled_*_mask.png
+        # ------------------------------------------------------------------
+
+        class_dir = os.path.join(self.output_dir, class_type)
+        image_out_dir = os.path.join(class_dir, 'image')
+        mask_out_dir  = os.path.join(class_dir, 'mask')
+        os.makedirs(image_out_dir, exist_ok=True)
+        os.makedirs(mask_out_dir, exist_ok=True)
+
+        styled_image_name = f"styled_{os.path.basename(image_filename)}"
+        styled_mask_name  = f"styled_{os.path.basename(mask_filename)}"
+
+        styled_image_path = os.path.join(image_out_dir, styled_image_name)
+        styled_mask_path  = os.path.join(mask_out_dir,  styled_mask_name)
+
+        # Save
         stylized_image.save(styled_image_path)
         mask.save(styled_mask_path)
         
@@ -349,7 +361,7 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
         target_csv: CSV file for target dataset
         output_dir: Directory to save styled images
         K: Number of clients for style (K=1 for overall domain style)
-        J_samples: Number of samples to use for style extraction (None = all)
+        J_samples: Number of samples for style extraction (None = all)
     """
     
     print("🚀 Starting CCST Pipeline - Option 1: Domain Adaptation")
