@@ -521,7 +521,9 @@ def create_combined_dataset(busi_dir: str, styled_dir: str, combined_dir: str):
         for idx in range(len(styled_df)):
             image_path = styled_df.iloc[idx]['image_path']
             mask_path = styled_df.iloc[idx]['mask_path']
-            class_type = styled_df.iloc[idx]['class']
+            
+            # Extract class from filename (e.g., "benign styled_0001.png" -> "benign")
+            class_type = image_path.split()[0]
             
             # Copy to combined directory
             image_file = image_path.split(' ', 1)[1]  # Remove class prefix
