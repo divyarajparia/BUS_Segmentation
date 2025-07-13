@@ -1,0 +1,11 @@
+image_path,mask_path,class,source_client,style_client,augmentation_type
+benign busi_benign (1).png,benign busi_benign (1)_mask.png,benign,BUSI,BUSI,original
+benign busi_benign (2).png,benign busi_benign (2)_mask.png,benign,BUSI,BUSI,original
+benign busi_benign (3).png,benign busi_benign (3)_mask.png,benign,BUSI,BUSI,original
+malignant busi_malignant (1).png,malignant busi_malignant (1)_mask.png,malignant,BUSI,BUSI,original
+malignant busi_malignant (2).png,malignant busi_malignant (2)_mask.png,malignant,BUSI,BUSI,original
+benign styled_0000.png,benign styled_0000_mask.png,benign,BUS-UCLM,BUSI,styled
+benign styled_0001.png,benign styled_0001_mask.png,benign,BUS-UCLM,BUSI,styled
+benign styled_0002.png,benign styled_0002_mask.png,benign,BUS-UCLM,BUSI,styled
+malignant styled_0003.png,malignant styled_0003_mask.png,malignant,BUS-UCLM,BUSI,styled
+malignant styled_0004.png,malignant styled_0004_mask.png,malignant,BUS-UCLM,BUSI,styled

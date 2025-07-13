@@ -96,9 +96,19 @@ class PrivacyPreservingStyleExtractor:
                         # Direct path format: "benign/image/file.png"
                         image_path = os.path.join(dataset_dir, image_path_info)
                     else:
-                        # BUSI format: "benign (1).png"
+                        # Extract class from filename (e.g., "benign (1).png" or "benign SHST_011.png")
                         class_type = image_path_info.split()[0]
-                        image_path = os.path.join(dataset_dir, class_type, 'image', image_path_info)
+                        
+                        # Try both folder structures: BUSI uses "image", BUS-UCLM uses "images"
+                        image_path_busi = os.path.join(dataset_dir, class_type, 'image', image_path_info)
+                        image_path_busuclm = os.path.join(dataset_dir, class_type, 'images', image_path_info)
+                        
+                        if os.path.exists(image_path_busi):
+                            image_path = image_path_busi
+                        elif os.path.exists(image_path_busuclm):
+                            image_path = image_path_busuclm
+                        else:
+                            image_path = image_path_busi  # Default to BUSI format
                     
                     if not os.path.exists(image_path):
                         continue
@@ -375,10 +385,25 @@ class CCSTDatasetGenerator:
                         mask_path = os.path.join(source_dataset_dir, mask_path_info)
                         class_type = image_path_info.split('/')[0]
                     else:
-                        # BUSI-style format
+                        # Extract class from filename (e.g., "benign (1).png" or "benign SHST_011.png")
                         class_type = image_path_info.split()[0]
-                        image_path = os.path.join(source_dataset_dir, class_type, 'image', image_path_info)
-                        mask_path = os.path.join(source_dataset_dir, class_type, 'mask', mask_path_info)
+                        
+                        # Try both folder structures: BUSI uses "image/mask", BUS-UCLM uses "images/masks"
+                        image_path_busi = os.path.join(source_dataset_dir, class_type, 'image', image_path_info)
+                        mask_path_busi = os.path.join(source_dataset_dir, class_type, 'mask', mask_path_info)
+                        image_path_busuclm = os.path.join(source_dataset_dir, class_type, 'images', image_path_info)
+                        mask_path_busuclm = os.path.join(source_dataset_dir, class_type, 'masks', mask_path_info)
+                        
+                        if os.path.exists(image_path_busi) and os.path.exists(mask_path_busi):
+                            image_path = image_path_busi
+                            mask_path = mask_path_busi
+                        elif os.path.exists(image_path_busuclm) and os.path.exists(mask_path_busuclm):
+                            image_path = image_path_busuclm
+                            mask_path = mask_path_busuclm
+                        else:
+                            # Default to BUSI format
+                            image_path = image_path_busi
+                            mask_path = mask_path_busi
                     
                     if not os.path.exists(image_path) or not os.path.exists(mask_path):
                         continue
@@ -458,11 +483,13 @@ def create_combined_dataset(busi_dir: str, styled_dir: str, combined_dir: str):
         for idx in range(len(busi_df)):
             image_path = busi_df.iloc[idx]['image_path']
             mask_path = busi_df.iloc[idx]['mask_path']
-            class_type = busi_df.iloc[idx]['class']
             
-            # Copy to combined directory
-            src_image = os.path.join(busi_dir, image_path)
-            src_mask = os.path.join(busi_dir, mask_path)
+            # Extract class from filename (e.g., "benign (322).png" -> "benign")
+            class_type = image_path.split()[0]
+            
+            # Build full paths using BUSI folder structure
+            src_image = os.path.join(busi_dir, class_type, 'image', image_path)
+            src_mask = os.path.join(busi_dir, class_type, 'mask', mask_path)
             
             if os.path.exists(src_image) and os.path.exists(src_mask):
                 # Generate new filename
