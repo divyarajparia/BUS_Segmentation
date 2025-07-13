@@ -88,6 +88,15 @@ class BaseSegmentationExperiment(object):
                 transform=train_image_transform, 
                 target_transform=train_target_transform
             )
+        elif self.args.train_data_type == 'BUSI-CCST-Combined':
+            from dataset.BioMedicalDataset.BUSICCSTCombinedDataset import BUSICCSTCombinedDataset
+            train_dataset = BUSICCSTCombinedDataset(
+                combined_dir=getattr(self.args, 'ccst_combined_dir', os.path.join(self.args.data_path, 'BUSI_CCST_Combined')),
+                original_busi_dir=os.path.join(self.args.data_path, 'BUSI'),
+                mode='train',
+                transform=train_image_transform,
+                target_transform=train_target_transform
+            )
         # Add other datasets as needed
         elif self.args.train_data_type == 'BUSIBUSUCLM':
             busi_dataset = BUSISegmentationDataset('dataset/BioMedicalDataset/BUSI', mode='train', transform=train_image_transform, target_transform=train_target_transform)
