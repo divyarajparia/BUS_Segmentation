@@ -341,13 +341,24 @@ class CCSTDatasetGenerator:
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         
-        # Transform for output processing
+        # Transform for output processing (handle both 1-channel and 3-channel tensors)
         self.output_transform = transforms.Compose([
-            transforms.Normalize(mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225], 
-                               std=[1/0.229, 1/0.224, 1/0.225]),
-            transforms.Lambda(lambda x: x[0:1, :, :]),  # Take first channel
+            transforms.Lambda(lambda x: self._denormalize_tensor(x)),
             transforms.ToPILImage()
         ])
+    
+    def _denormalize_tensor(self, tensor):
+        """
+        Convert decoder output (Tanh range [-1,1]) to PIL-compatible format [0,1]
+        """
+        # The decoder outputs with Tanh activation in range [-1, 1]
+        # Convert to [0, 1] range for PIL Image
+        result = (tensor + 1.0) / 2.0
+        
+        # Clamp to ensure valid range
+        result = result.clamp(0, 1)
+        
+        return result
     
     def generate_ccst_dataset(self, source_dataset_dir: str, target_style_stats: Dict,
                              output_dir: str, csv_file: str = 'train_frame.csv') -> List[Dict]:
@@ -435,8 +446,17 @@ class CCSTDatasetGenerator:
                     image = Image.open(image_path).convert('L')
                     image_tensor = self.input_transform(image).unsqueeze(0).to(self.device)
                     
+                    # Debug: Print tensor shapes
+                    if idx < 3:
+                        print(f"      Input tensor shape: {image_tensor.shape}")
+                    
                     # Apply style transfer
                     styled_tensor = self.model(image_tensor, target_style_stats)
+                    
+                    # Debug: Print output tensor shape
+                    if idx < 3:
+                        print(f"      Output tensor shape: {styled_tensor.shape}")
+                        print(f"      After squeeze shape: {styled_tensor.squeeze(0).shape}")
                     
                     # Convert back to PIL image
                     styled_image = self.output_transform(styled_tensor.squeeze(0).cpu())
