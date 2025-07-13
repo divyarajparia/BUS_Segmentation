@@ -394,6 +394,12 @@ class CCSTDatasetGenerator:
                         image_path_busuclm = os.path.join(source_dataset_dir, class_type, 'images', image_path_info)
                         mask_path_busuclm = os.path.join(source_dataset_dir, class_type, 'masks', mask_path_info)
                         
+                        # Debug: Show what paths are being tried
+                        if idx < 3:  # Only show first 3 for debugging
+                            print(f"   🔍 Processing {image_path_info} (class: {class_type})")
+                            print(f"      Trying BUSI path: {image_path_busi}")
+                            print(f"      Trying BUS-UCLM path: {image_path_busuclm}")
+                        
                         if os.path.exists(image_path_busi) and os.path.exists(mask_path_busi):
                             image_path = image_path_busi
                             mask_path = mask_path_busi
@@ -406,6 +412,7 @@ class CCSTDatasetGenerator:
                             mask_path = mask_path_busi
                     
                     if not os.path.exists(image_path) or not os.path.exists(mask_path):
+                        print(f"   ⚠️  Warning: Files not found - Image: {image_path}, Mask: {mask_path}")
                         continue
                     
                     # Load and transform image
@@ -451,9 +458,13 @@ class CCSTDatasetGenerator:
         styled_df = pd.DataFrame(generated_samples)
         styled_df.to_csv(csv_path, index=False)
         
-        print(f"   ✅ Generated {len(generated_samples)} styled images")
-        print(f"   📁 Dataset saved to {output_dir}")
-        print(f"   📊 Metadata saved to {csv_path}")
+        print(f"   ✅ Generated {len(generated_samples)} styled images from {len(df)} source images")
+        if len(generated_samples) == 0:
+            print(f"   ⚠️  WARNING: No images were successfully generated!")
+            print(f"   🔍 Check that the source dataset paths are correct and files exist")
+        else:
+            print(f"   📁 Dataset saved to {output_dir}")
+            print(f"   📊 Metadata saved to {csv_path}")
         
         return generated_samples
 
@@ -516,7 +527,19 @@ def create_combined_dataset(busi_dir: str, styled_dir: str, combined_dir: str):
     # 2. Add styled BUS-UCLM data
     styled_csv = os.path.join(styled_dir, 'styled_dataset.csv')
     if os.path.exists(styled_csv):
-        styled_df = pd.read_csv(styled_csv)
+        try:
+            styled_df = pd.read_csv(styled_csv)
+            if len(styled_df) == 0:
+                print(f"   ⚠️  Warning: Styled dataset CSV is empty - skipping styled data")
+                styled_df = pd.DataFrame()  # Create empty DataFrame
+        except pd.errors.EmptyDataError:
+            print(f"   ⚠️  Warning: Styled dataset CSV has no data - skipping styled data")
+            styled_df = pd.DataFrame()  # Create empty DataFrame
+        
+        if len(styled_df) > 0:
+            print(f"   📊 Processing {len(styled_df)} styled samples...")
+        else:
+            print(f"   ⚠️  No styled samples found to process")
         
         for idx in range(len(styled_df)):
             image_path = styled_df.iloc[idx]['image_path']
