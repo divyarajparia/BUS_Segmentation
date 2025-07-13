@@ -13,6 +13,7 @@ import argparse
 from dataset.BioMedicalDataset.CCSTDataset import CCSTAugmentedDataset
 from dataset.BioMedicalDataset.BUSISegmentationDataset import BUSISegmentationDataset
 from IS2D_models.mfmsnet import MFMSNet
+from utils.calculate_metrics import calculate_dice, calculate_iou
 
 def create_transforms():
     """Create training and validation transforms following CCST paper"""
@@ -217,10 +218,9 @@ def evaluate_model(model, test_loader, device):
     criterion = nn.BCEWithLogitsLoss()
     
     test_loss = 0.0
-    correct_pixels = 0
-    total_pixels = 0
+    dice_scores = []
     iou_scores = []
-    
+
     with torch.no_grad():
         for images, masks in test_loader:
             images, masks = images.to(device), masks.to(device)
@@ -230,37 +230,26 @@ def evaluate_model(model, test_loader, device):
             loss = criterion(map_output, masks)
             
             test_loss += loss.item()
-            
-            # Calculate pixel accuracy
-            predictions = torch.sigmoid(map_output) > 0.5
-            correct_pixels += (predictions == masks).sum().item()
-            total_pixels += masks.numel()
-            
-            # Calculate IoU for each sample in batch
-            for i in range(predictions.size(0)):
-                pred_i = predictions[i].float()
-                mask_i = masks[i].float()
-                
-                intersection = (pred_i * mask_i).sum()
-                union = pred_i.sum() + mask_i.sum() - intersection
-                
-                if union > 0:
-                    iou = intersection / union
-                    iou_scores.append(iou.item())
-    
+            preds = torch.sigmoid(map_output) > 0.5
+            for i in range(preds.size(0)):
+                dice = calculate_dice(preds[i:i+1], masks[i:i+1])
+                iou  = calculate_iou(preds[i:i+1], masks[i:i+1])
+                dice_scores.append(dice)
+                iou_scores.append(iou)
+
     avg_test_loss = test_loss / len(test_loader)
-    pixel_accuracy = correct_pixels / total_pixels
-    mean_iou = sum(iou_scores) / len(iou_scores) if iou_scores else 0.0
-    
+    mean_dice = sum(dice_scores) / len(dice_scores) if dice_scores else 0.0
+    mean_iou  = sum(iou_scores) / len(iou_scores) if iou_scores else 0.0
+
     print(f'🎯 Final Test Results (CCST Paper Methodology):')
     print(f'   Test Loss: {avg_test_loss:.4f}')
-    print(f'   Pixel Accuracy: {pixel_accuracy:.4f}')
+    print(f'   Mean Dice: {mean_dice:.4f}')
     print(f'   Mean IoU: {mean_iou:.4f}')
     print(f'   Evaluated on {len(test_loader)} batches of original BUSI data')
-    
+
     return {
         'test_loss': avg_test_loss,
-        'pixel_accuracy': pixel_accuracy,
+        'mean_dice': mean_dice,
         'mean_iou': mean_iou
     }
 
@@ -356,6 +345,14 @@ def main():
     
     # Final evaluation on test set (original BUSI only)
     test_results = evaluate_model(model, test_loader, device)
+
+    # Save results JSON if results_path provided
+    try:
+        import json, os
+        with open(args.results_path, 'w') as f:
+            json.dump(test_results, f, indent=2)
+    except Exception as e:
+        print(f"⚠️  Could not save results to {args.results_path}: {e}")
     
     # Save training history
     import json
@@ -366,7 +363,7 @@ def main():
     print(f"=" * 50)
     print(f"Final Results (following CCST paper evaluation):")
     print(f"  Test Loss: {test_results['test_loss']:.4f}")
-    print(f"  Pixel Accuracy: {test_results['pixel_accuracy']:.4f}")
+    print(f"  Mean Dice: {test_results['mean_dice']:.4f}")
     print(f"  Mean IoU: {test_results['mean_iou']:.4f}")
     print(f"\nFiles saved:")
     print(f"  Best model: {args.save_path}")

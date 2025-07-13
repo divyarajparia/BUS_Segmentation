@@ -22,7 +22,7 @@ def IS2D_main(args) :
         print("Please explicitely write the dataset type")
         sys.exit()
 
-    if args.train_data_type in ['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined']:
+    if args.train_data_type in ['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined', 'BUSI-CCST']:
         args.num_channels = 3
         args.image_size = 352
         args.num_classes = 1
@@ -43,11 +43,13 @@ def IS2D_main(args) :
 if __name__=='__main__' :
     parser = argparse.ArgumentParser(description='Following are the arguments that can be passed form the terminal itself!')
     parser.add_argument('--data_path', type=str, default='dataset/BioMedicalDataset')
-    parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined'])
+    parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined', 'BUSI-CCST'])
     parser.add_argument('--synthetic_data_dir', type=str, default='synthetic_busi_madgnet', help='Directory containing synthetic BUSI data')
+    parser.add_argument('--ccst_augmented_path', type=str, default='dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented', help='Path to CCST augmented dataset (styled BUS-UCLM)')
     parser.add_argument('--test_data_type', type=str, required=False, choices=['CVC-ClinicDB', 'Kvasir', 'CVC-300', 'CVC-ColonDB', 'ETIS-LaribPolypDB',
                                                                                             'DSB2018', 'MonuSeg2018', 'ISIC2018', 'PH2', 'COVID19', 'COVID19_2', 'BUSI', 'STU', 'BUS-UCLM'])
 
+    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
     parser.add_argument('--num_workers', type=int, default=4, help='number of workers')
     parser.add_argument('--batch_size', type=int, default=4, help='batch size for training')
     parser.add_argument('--save_path', type=str, default='model_weights')
@@ -116,5 +118,10 @@ if __name__=='__main__' :
     # Cell Segmentation Generalizability Test
     if args.train_data_type == 'DSB2018':
         for test_data_type in ['DSB2018', 'MonuSeg2018']:
+            args.test_data_type = test_data_type
+            IS2D_main(args)
+
+    if args.train_data_type == 'BUSI-CCST':
+        for test_data_type in ['BUSI']:
             args.test_data_type = test_data_type
             IS2D_main(args)

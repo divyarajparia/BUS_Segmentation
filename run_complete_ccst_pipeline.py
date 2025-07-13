@@ -117,6 +117,8 @@ def main():
                        help='Skip CCST training')
     parser.add_argument('--quick-test', action='store_true',
                        help='Run with reduced epochs for quick testing')
+    parser.add_argument('--skip-evaluate', action='store_true',
+                       help='Skip external evaluation step (use training script results)')
     parser.add_argument('--ccst-augmented-path', type=str,
                        default='dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented',
                        help='Directory for CCST-augmented data (both generation output and training input)')
@@ -226,8 +228,8 @@ def main():
         ):
             success = False
     
-    # Step 5: Evaluate CCST model (if not already done)
-    if success and not os.path.exists(ccst_results_path):
+    # Step 5: Evaluate CCST model (optional)
+    if success and not os.path.exists(ccst_results_path) and not args.skip_evaluate:
         if not run_command(
             f"python evaluate_model.py "
             f"--model-path '{ccst_model_path}' "

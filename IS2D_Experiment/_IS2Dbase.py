@@ -96,6 +96,24 @@ class BaseSegmentationExperiment(object):
             
             # combined_dataset = ConcatDataset([busi_dataset, bus_uclm_dataset])
             # train_ = DataLoader(combined_dataset, batch_size=..., shuffle=True, ...)
+        elif self.args.train_data_type == 'BUSI-CCST':
+            # Combine original BUSI training data with CCST style-transferred BUS-UCLM
+            busi_dataset = BUSISegmentationDataset(
+                os.path.join(self.args.data_path, 'BUSI'),
+                mode='train',
+                transform=train_image_transform,
+                target_transform=train_target_transform
+            )
+            from dataset.BioMedicalDataset.CCSTDataset import CCSTAugmentedDataset
+            ccst_dataset = CCSTAugmentedDataset(
+                ccst_augmented_dir=self.args.ccst_augmented_path,
+                original_busi_dir=os.path.join(self.args.data_path, 'BUSI'),
+                mode='train',
+                transform=train_image_transform,
+                target_transform=train_target_transform,
+                combine_with_original=False  # BUSI already included separately
+            )
+            train_dataset = ConcatDataset([busi_dataset, ccst_dataset])
 
 
         else:
