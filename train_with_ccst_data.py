@@ -143,19 +143,16 @@ def train_model(model, train_loader, val_loader, device, *, save_path='best_ccst
             # Forward pass
             outputs = model(images, mode='train')
             
-            # Calculate loss (for MFMSNet with multiple outputs)
-            if isinstance(outputs, list):
-                # Multiple outputs from different decoder stages
-                loss = 0
-                for output in outputs:
-                    if isinstance(output, list):
-                        # Each output is [map, distance, boundary]
-                        loss += criterion(output[0], masks)  # Use segmentation map
-                    else:
-                        loss += criterion(output, masks)
-                loss /= len(outputs)
-            else:
-                loss = criterion(outputs, masks)
+            # Ensure we always compute loss on the main segmentation map
+            def get_map(t):
+                if isinstance(t, (list, tuple)):
+                    # Expect deepest resolution at index 3
+                    candidate = t[3] if len(t) > 3 else t[-1]
+                    return candidate[0] if isinstance(candidate, (list, tuple)) else candidate
+                return t
+
+            map_output = get_map(outputs)
+            loss = criterion(map_output, masks)
             
             # Backward pass
             loss.backward()
@@ -176,8 +173,9 @@ def train_model(model, train_loader, val_loader, device, *, save_path='best_ccst
             for images, masks in val_loader:
                 images, masks = images.to(device), masks.to(device)
                 
-                outputs = model(images, mode='test')  # Single output in test mode
-                loss = criterion(outputs, masks)
+                outputs = model(images, mode='test')  # Model may return tuple/list
+                map_output = get_map(outputs)
+                loss = criterion(map_output, masks)
                 
                 val_loss += loss.item()
                 val_samples += images.size(0)
@@ -209,6 +207,12 @@ def evaluate_model(model, test_loader, device):
     
     print(f"\n📊 Evaluating model on test set (original BUSI only)...")
     
+    def get_map(t):
+        if isinstance(t, (list, tuple)):
+            candidate = t[3] if len(t) > 3 else t[-1]
+            return candidate[0] if isinstance(candidate, (list, tuple)) else candidate
+        return t
+
     model.eval()
     criterion = nn.BCEWithLogitsLoss()
     
@@ -222,12 +226,13 @@ def evaluate_model(model, test_loader, device):
             images, masks = images.to(device), masks.to(device)
             
             outputs = model(images, mode='test')
-            loss = criterion(outputs, masks)
+            map_output = get_map(outputs)
+            loss = criterion(map_output, masks)
             
             test_loss += loss.item()
             
             # Calculate pixel accuracy
-            predictions = torch.sigmoid(outputs) > 0.5
+            predictions = torch.sigmoid(map_output) > 0.5
             correct_pixels += (predictions == masks).sum().item()
             total_pixels += masks.numel()
             

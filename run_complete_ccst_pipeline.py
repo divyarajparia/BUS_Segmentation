@@ -164,7 +164,8 @@ def main():
         if not run_command(
             f"python ccst_exact_replication.py "
             f"--source_dataset '{args.bus_uclm_path}' "
-            f"--target_dataset '{args.busi_path}'",
+            f"--target_dataset '{args.busi_path}' "
+            f"--output_dir '{ccst_augmented_path}'",
             "Step 1: Generating CCST-augmented data (BUSI style → BUS-UCLM content)"
         ):
             success = False
