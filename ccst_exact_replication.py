@@ -292,8 +292,12 @@ class CCSTDataset(Dataset):
         os.makedirs(image_out_dir, exist_ok=True)
         os.makedirs(mask_out_dir, exist_ok=True)
 
-        styled_image_name = f"styled_{os.path.basename(image_filename)}"
-        styled_mask_name  = f"styled_{os.path.basename(mask_filename)}"
+        # Fix filename generation - masks should have _mask suffix
+        base_image_name = os.path.splitext(os.path.basename(image_filename))[0]
+        base_mask_name = os.path.splitext(os.path.basename(mask_filename))[0]
+        
+        styled_image_name = f"styled_{base_image_name}.png"
+        styled_mask_name  = f"styled_{base_mask_name}.png"
 
         styled_image_path = os.path.join(image_out_dir, styled_image_name)
         styled_mask_path  = os.path.join(mask_out_dir,  styled_mask_name)
@@ -334,9 +338,10 @@ class CCSTDataset(Dataset):
         if tensor.dim() != 2:
             raise ValueError(f"Expected 2D tensor after processing, got {tensor.dim()}D")
         
-        # Convert to numpy and scale to [0, 255]
-        tensor = torch.clamp(tensor, 0, 1)
-        np_image = (tensor.cpu().numpy() * 255).astype(np.uint8)
+        # Convert to numpy and scale to [0, 255] with proper handling
+        tensor = tensor.cpu()  # Move to CPU first
+        tensor = torch.clamp(tensor, 0, 1)  # Clamp to valid range
+        np_image = (tensor.numpy() * 255).astype(np.uint8)
         
         return Image.fromarray(np_image, mode='L')
 
