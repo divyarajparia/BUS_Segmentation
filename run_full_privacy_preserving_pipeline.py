@@ -157,19 +157,33 @@ def create_combined_training_csv():
     busi_df = pd.read_csv(busi_train_path)
     styled_df = pd.read_csv(styled_data_path)
     
-    # Add dataset source information
-    busi_df['source'] = 'BUSI'
-    busi_df['dataset_path'] = 'dataset/BioMedicalDataset/BUSI'
+    # Add required columns for CCSTDataset compatibility
+    # For original BUSI data - derive class from image_path
+    busi_df['class'] = busi_df['image_path'].apply(lambda x: 'benign' if 'benign' in x else 'malignant')
+    busi_df['source_client'] = 'BUSI'
+    busi_df['style_client'] = 'BUSI'
+    busi_df['augmentation_type'] = 'original'
     
-    styled_df['source'] = 'BUS-UCLM-styled'
-    styled_df['dataset_path'] = 'dataset/BioMedicalDataset/BUS-UCLM-Privacy-Styled'
+    # Styled data should already have the correct columns from privacy_preserving_style_transfer.py
+    # But let's make sure they exist
+    if 'source_client' not in styled_df.columns:
+        styled_df['source_client'] = 'BUS-UCLM'
+    if 'style_client' not in styled_df.columns:
+        styled_df['style_client'] = 'BUSI'
+    if 'augmentation_type' not in styled_df.columns:
+        styled_df['augmentation_type'] = 'styled'
     
     # Combine datasets
     combined_df = pd.concat([busi_df, styled_df], ignore_index=True)
     
-    # Save combined dataset
-    combined_path = 'dataset/BioMedicalDataset/combined_privacy_preserving_train.csv'
-    combined_df.to_csv(combined_path, index=False)
+    # Ensure columns are in the correct order for CCSTDataset
+    column_order = ['image_path', 'mask_path', 'class', 'source_client', 'style_client', 'augmentation_type']
+    if 'original_image' in combined_df.columns:
+        column_order.append('original_image')
+    
+    # Save combined dataset in the location IS2D expects
+    combined_path = 'dataset/BioMedicalDataset/BUS-UCLM-Privacy-Styled/combined_ccst_train.csv'
+    combined_df[column_order].to_csv(combined_path, index=False)
     
     print(f"   ✅ Combined training CSV created: {combined_path}")
     print(f"   📊 Total samples: {len(combined_df)}")

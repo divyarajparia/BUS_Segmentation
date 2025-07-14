@@ -443,11 +443,14 @@ def generate_styled_dataset(source_dataset_path, source_csv, style_stats_path,
                 import shutil
                 shutil.copy2(mask_path, styled_mask_path)
             
-            # Record styled sample
+            # Record styled sample with all required columns for CCSTDataset
             styled_samples.append({
                 'image_path': styled_filename,
                 'mask_path': styled_mask_filename,
                 'class': class_type,
+                'source_client': 'BUS-UCLM',  # Source dataset
+                'style_client': 'BUSI',       # Style comes from BUSI
+                'augmentation_type': 'styled', # Type of augmentation
                 'original_image': image_filename
             })
             
