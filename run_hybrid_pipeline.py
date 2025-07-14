@@ -15,7 +15,7 @@ from PIL import Image
 import gc
 
 def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats_path, 
-                                 output_dir, complexity='medium'):
+                                 output_dir, complexity='medium', use_full_dataset=True):
     """
     Generate styled dataset using hybrid medical style transfer.
     """
@@ -28,8 +28,14 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
     with open(target_stats_path, 'r') as f:
         target_stats = json.load(f)
     
-    # Load source CSV
-    csv_path = os.path.join(source_dataset_path, source_csv)
+    # Load source CSV - use full dataset if requested
+    if use_full_dataset and os.path.exists(os.path.join(source_dataset_path, 'full_dataset.csv')):
+        csv_path = os.path.join(source_dataset_path, 'full_dataset.csv')
+        print(f"   📈 Using FULL BUS-UCLM dataset (all train/test/val)")
+    else:
+        csv_path = os.path.join(source_dataset_path, source_csv)
+        print(f"   📊 Using BUS-UCLM {source_csv}")
+    
     df = pd.read_csv(csv_path)
     
     # Create output directories
@@ -150,9 +156,13 @@ def create_hybrid_combined_csv(styled_dir, complexity):
         styled_df = pd.read_csv(styled_csv)
         combined_samples.extend(styled_df.to_dict('records'))
     
-    # Save combined CSV
+    # Save combined CSV with shuffling
     combined_csv = os.path.join(styled_dir, 'ccst_augmented_dataset.csv')
     combined_df = pd.DataFrame(combined_samples)
+    
+    # 🔄 CRITICAL: Shuffle the combined dataset for proper training
+    combined_df = combined_df.sample(frac=1, random_state=42).reset_index(drop=True)
+    
     combined_df.to_csv(combined_csv, index=False)
     
     # Print statistics
@@ -216,7 +226,8 @@ def run_complete_hybrid_pipeline(complexity='medium'):
         source_csv='train_frame.csv',
         target_stats_path=stats_path,
         output_dir=output_dir,
-        complexity=complexity
+        complexity=complexity,
+        use_full_dataset=True  # Use all 264 BUS-UCLM samples
     )
     
     generation_time = time.time() - start_time
