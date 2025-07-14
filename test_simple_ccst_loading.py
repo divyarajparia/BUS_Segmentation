@@ -108,10 +108,10 @@ def check_file_structure(styled_path):
     print(f"\n🔍 Checking file structure of {styled_path}")
     
     required_dirs = [
-        'benign/images',
-        'benign/masks', 
-        'malignant/images',
-        'malignant/masks'
+        'benign/image',   # Use actual folder names
+        'benign/mask', 
+        'malignant/image',
+        'malignant/mask'
     ]
     
     required_files = [

@@ -140,7 +140,7 @@ def create_simple_styled_csv(styled_dir, complexity):
     if os.path.exists(benign_image_dir):
         for filename in sorted(os.listdir(benign_image_dir)):
             if filename.endswith('.png'):
-                mask_filename = filename.replace('.png', '_mask.png')
+                mask_filename = filename  # Mask has same name as image
                 samples.append({
                     'image_path': f'benign {filename}',
                     'mask_path': f'benign {mask_filename}'
@@ -153,7 +153,7 @@ def create_simple_styled_csv(styled_dir, complexity):
     if os.path.exists(malignant_image_dir):
         for filename in sorted(os.listdir(malignant_image_dir)):
             if filename.endswith('.png'):
-                mask_filename = filename.replace('.png', '_mask.png')
+                mask_filename = filename  # Mask has same name as image
                 samples.append({
                     'image_path': f'malignant {filename}',
                     'mask_path': f'malignant {mask_filename}'
