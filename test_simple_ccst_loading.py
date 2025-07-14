@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import torch
 from torch.utils.data import DataLoader
 from dataset.BioMedicalDataset.BUSISegmentationDataset import BUSISegmentationDataset
-from dataset.BioMedicalDataset.StyledSegmentationDataset import StyledSegmentationDataset
+from dataset.BioMedicalDataset.BUSUCLMSegmentationDataset import BUSUCLMSegmentationDataset
 from torch.utils.data import ConcatDataset
 
 def test_simple_ccst_loading():
@@ -44,7 +44,7 @@ def test_simple_ccst_loading():
         print(f"   ✅ BUSI dataset loaded: {len(busi_dataset)} samples")
         
         print("\n🔄 Loading styled dataset...")
-        styled_dataset = StyledSegmentationDataset(styled_path, mode='train')
+        styled_dataset = BUSUCLMSegmentationDataset(styled_path, mode='train')
         print(f"   ✅ Styled dataset loaded: {len(styled_dataset)} samples")
         
         # Create concatenated dataset
@@ -108,10 +108,10 @@ def check_file_structure(styled_path):
     print(f"\n🔍 Checking file structure of {styled_path}")
     
     required_dirs = [
-        'benign/image',   # Use actual folder names
-        'benign/mask', 
-        'malignant/image',
-        'malignant/mask'
+        'benign/images',  # Corrected to plural
+        'benign/masks', 
+        'malignant/images',
+        'malignant/masks'
     ]
     
     required_files = [

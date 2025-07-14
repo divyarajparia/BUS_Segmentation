@@ -17,7 +17,7 @@ from dataset.BioMedicalDataset.BUSISegmentationDataset import *
 from dataset.BioMedicalDataset.STUSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSUCLMSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSICombinedDataset import *
-from dataset.BioMedicalDataset.StyledSegmentationDataset import StyledSegmentationDataset
+# from dataset.BioMedicalDataset.StyledSegmentationDataset import StyledSegmentationDataset
 from utils.get_functions import *
 from torch.utils.data import ConcatDataset
 
@@ -110,7 +110,7 @@ class BaseSegmentationExperiment(object):
             # Simple concatenation approach like BUSIBUSUCLM
             print("🔄 Loading BUSI + Styled combined training dataset...")
             busi_dataset = BUSISegmentationDataset('dataset/BioMedicalDataset/BUSI', mode='train', transform=train_image_transform, target_transform=train_target_transform)
-            styled_dataset = StyledSegmentationDataset(self.args.styled_dataset_path, mode='train', transform=train_image_transform, target_transform=train_target_transform)
+            styled_dataset = BUSUCLMSegmentationDataset(self.args.styled_dataset_path, mode='train', transform=train_image_transform, target_transform=train_target_transform)
             train_dataset = ConcatDataset([busi_dataset, styled_dataset])
             
             # Log dataset sizes

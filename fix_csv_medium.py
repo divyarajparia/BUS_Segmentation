@@ -15,7 +15,7 @@ def fix_csv_file(styled_dir):
     samples = []
     
     # Check benign images
-    benign_image_dir = os.path.join(styled_dir, 'benign', 'image')  # Use actual folder name
+    benign_image_dir = os.path.join(styled_dir, 'benign', 'images')  # Corrected to plural
     
     if os.path.exists(benign_image_dir):
         for filename in sorted(os.listdir(benign_image_dir)):
@@ -27,7 +27,7 @@ def fix_csv_file(styled_dir):
                 })
     
     # Check malignant images  
-    malignant_image_dir = os.path.join(styled_dir, 'malignant', 'image')  # Use actual folder name
+    malignant_image_dir = os.path.join(styled_dir, 'malignant', 'images')  # Corrected to plural
     
     if os.path.exists(malignant_image_dir):
         for filename in sorted(os.listdir(malignant_image_dir)):
