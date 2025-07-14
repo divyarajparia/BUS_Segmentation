@@ -1,0 +1,11 @@
+image_path,mask_path,class,original_image
+styled_benign SHST_011.png,styled_benign SHST_011.png,benign,benign SHST_011.png
+styled_benign STSP_003.png,styled_benign STSP_003.png,benign,benign STSP_003.png
+styled_benign ALWI_002.png,styled_benign ALWI_002.png,benign,benign ALWI_002.png
+styled_benign VITR_005.png,styled_benign VITR_005.png,benign,benign VITR_005.png
+styled_benign PLBA_018.png,styled_benign PLBA_018.png,benign,benign PLBA_018.png
+styled_malignant SIBA_002.png,styled_malignant SIBA_002.png,malignant,malignant SIBA_002.png
+styled_malignant COPE_014.png,styled_malignant COPE_014.png,malignant,malignant COPE_014.png
+styled_malignant FLKA_005.png,styled_malignant FLKA_005.png,malignant,malignant FLKA_005.png
+styled_malignant SIBA_007.png,styled_malignant SIBA_007.png,malignant,malignant SIBA_007.png
+styled_malignant UNCU_002.png,styled_malignant UNCU_002.png,malignant,malignant UNCU_002.png

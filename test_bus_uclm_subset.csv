@@ -1,0 +1,11 @@
+image_path,mask_path
+benign SHST_011.png,benign SHST_011.png
+benign STSP_003.png,benign STSP_003.png
+benign ALWI_002.png,benign ALWI_002.png
+benign VITR_005.png,benign VITR_005.png
+benign PLBA_018.png,benign PLBA_018.png
+malignant SIBA_002.png,malignant SIBA_002.png
+malignant COPE_014.png,malignant COPE_014.png
+malignant FLKA_005.png,malignant FLKA_005.png
+malignant SIBA_007.png,malignant SIBA_007.png
+malignant UNCU_002.png,malignant UNCU_002.png
