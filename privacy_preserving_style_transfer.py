@@ -206,9 +206,15 @@ class PrivacyPreservingStyleTransfer:
         else:
             raise ValueError(f"Unknown method: {self.method}")
         
-        # Save styled image
-        cv2.imwrite(output_path, styled_image)
-        return styled_image
+        # Save styled image as RGB to match BUSI format
+        # Convert grayscale to RGB for consistency with BUSI
+        if len(styled_image.shape) == 2:  # Grayscale
+            styled_image_rgb = cv2.cvtColor(styled_image, cv2.COLOR_GRAY2RGB)
+        else:  # Already RGB
+            styled_image_rgb = styled_image
+        
+        cv2.imwrite(output_path, styled_image_rgb)
+        return styled_image_rgb
     
     def _histogram_matching(self, source_image):
         """
@@ -435,13 +441,31 @@ def generate_styled_dataset(source_dataset_path, source_csv, style_stats_path,
             styled_image_path = os.path.join(output_image_dir, styled_filename)
             styled_mask_path = os.path.join(output_mask_dir, styled_mask_filename)
             
-            # Apply style transfer
+            # Apply style transfer to image
             style_transfer.apply_style_transfer(source_path, styled_image_path)
             
-            # Copy mask (unchanged)
+            # Process mask properly (resize and convert to match image format)
             if os.path.exists(mask_path):
-                import shutil
-                shutil.copy2(mask_path, styled_mask_path)
+                # Load original mask
+                original_mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+                if original_mask is None:
+                    # Try as RGB and convert
+                    original_mask = cv2.imread(mask_path)
+                    if original_mask is not None:
+                        original_mask = cv2.cvtColor(original_mask, cv2.COLOR_BGR2GRAY)
+                
+                if original_mask is not None:
+                    # Resize mask to match styled image size (256x256)
+                    resized_mask = cv2.resize(original_mask, (256, 256), interpolation=cv2.INTER_NEAREST)
+                    
+                    # Ensure binary mask (threshold if needed)
+                    _, binary_mask = cv2.threshold(resized_mask, 127, 255, cv2.THRESH_BINARY)
+                    
+                    # Save processed mask
+                    cv2.imwrite(styled_mask_path, binary_mask)
+                else:
+                    print(f"   ⚠️ Could not load mask: {mask_path}")
+                    continue
             
             # Record styled sample with all required columns for CCSTDataset
             styled_samples.append({
