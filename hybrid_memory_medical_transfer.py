@@ -484,9 +484,27 @@ class HybridMedicalStyleTransfer:
     
     def _save_statistics(self, stats, save_path):
         """Save statistics to file."""
+        def convert_numpy_types(obj):
+            """Convert numpy types to native Python types for JSON serialization."""
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, (np.float32, np.float64)):
+                return float(obj)
+            elif isinstance(obj, (np.int32, np.int64)):
+                return int(obj)
+            elif isinstance(obj, dict):
+                return {key: convert_numpy_types(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_numpy_types(item) for item in obj]
+            else:
+                return obj
+        
+        # Convert all numpy types to JSON-serializable types
+        serializable_stats = convert_numpy_types(stats)
+        
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         with open(save_path, 'w') as f:
-            json.dump(stats, f, indent=2)
+            json.dump(serializable_stats, f, indent=2)
         print(f"💾 Statistics saved to {save_path}")
 
 

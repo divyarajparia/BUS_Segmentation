@@ -65,15 +65,14 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
                 source_image_path, target_stats, output_image_path
             )
             
-            # Process mask efficiently
-            mask_source_path = source_image_path.replace('/image/', '/images/').replace('/images/', '/masks/')
-            mask_filename = os.path.basename(mask_path_info)
-            if ' ' in mask_filename:
-                mask_filename = mask_filename.replace(' ', '_')
-            mask_source_path = os.path.join(os.path.dirname(mask_source_path), mask_filename)
+            # Process mask efficiently - fix path construction
+            # mask_path_info format: "benign FILENAME.png" or "malignant FILENAME.png"
+            mask_class, mask_filename = mask_path_info.split(' ', 1)
+            mask_source_path = os.path.join(source_dataset_path, mask_class, 'masks', mask_filename)
             
             if os.path.exists(mask_source_path):
                 # Process mask with minimal memory
+                os.makedirs(os.path.dirname(output_mask_path), exist_ok=True)
                 mask = cv2.imread(mask_source_path)
                 if mask is not None:
                     mask_resized = cv2.resize(mask, (256, 256))
@@ -84,6 +83,10 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
                     
                     # Clean up mask memory
                     del mask, mask_resized, mask_gray, mask_binary, mask_rgb
+                else:
+                    print(f"   Warning: Could not read mask {mask_source_path}")
+            else:
+                print(f"   Warning: Mask not found at {mask_source_path}")
             
             styled_samples.append({
                 'image_path': f"{class_type} {output_filename}",

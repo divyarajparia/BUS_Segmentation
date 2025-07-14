@@ -1,0 +1,26 @@
+{
+  "processed_images": 485,
+  "intensity_distributions": [
+    {
+      "mean": 0.3297556936740875,
+      "std": 0.20477131009101868,
+      "percentiles": [
+        0.2,
+        0.3,
+        0.5,
+        0.7,
+        0.8
+      ]
+    }
+  ],
+  "texture_features": [
+    {
+      "avg_energy": 187.0686804642816
+    }
+  ],
+  "edge_characteristics": [
+    {
+      "avg_density": 0.11508629949233093
+    }
+  ]
+}
