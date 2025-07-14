@@ -17,6 +17,7 @@ from dataset.BioMedicalDataset.BUSISegmentationDataset import *
 from dataset.BioMedicalDataset.STUSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSUCLMSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSICombinedDataset import *
+from dataset.BioMedicalDataset.StyledSegmentationDataset import StyledSegmentationDataset
 from utils.get_functions import *
 from torch.utils.data import ConcatDataset
 
@@ -106,17 +107,16 @@ class BaseSegmentationExperiment(object):
             # combined_dataset = ConcatDataset([busi_dataset, bus_uclm_dataset])
             # train_ = DataLoader(combined_dataset, batch_size=..., shuffle=True, ...)
         elif self.args.train_data_type == 'BUSI-CCST':
-            # Use CCSTAugmentedDataset with combine_with_original=True to include BUSI data
-            print("🔄 Loading BUSI + CCST combined training dataset...")
-            from dataset.BioMedicalDataset.CCSTDataset import CCSTAugmentedDataset
-            train_dataset = CCSTAugmentedDataset(
-                ccst_augmented_dir=self.args.ccst_augmented_path,
-                original_busi_dir=os.path.join(self.args.data_path, 'BUSI'),
-                mode='train',
-                transform=train_image_transform,
-                target_transform=train_target_transform,
-                combine_with_original=True  # Include original BUSI data directly
-            )
+            # Simple concatenation approach like BUSIBUSUCLM
+            print("🔄 Loading BUSI + Styled combined training dataset...")
+            busi_dataset = BUSISegmentationDataset('dataset/BioMedicalDataset/BUSI', mode='train', transform=train_image_transform, target_transform=train_target_transform)
+            styled_dataset = StyledSegmentationDataset(self.args.styled_dataset_path, mode='train', transform=train_image_transform, target_transform=train_target_transform)
+            train_dataset = ConcatDataset([busi_dataset, styled_dataset])
+            
+            # Log dataset sizes
+            print(f"   📊 Original BUSI: {len(busi_dataset)} samples")
+            print(f"   📊 Styled dataset: {len(styled_dataset)} samples") 
+            print(f"   📊 Total combined: {len(train_dataset)} samples")
 
 
         else:

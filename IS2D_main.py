@@ -46,6 +46,7 @@ if __name__=='__main__' :
     parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined', 'BUSI-CCST'])
     parser.add_argument('--synthetic_data_dir', type=str, default='synthetic_busi_madgnet', help='Directory containing synthetic BUSI data')
     parser.add_argument('--ccst_augmented_path', type=str, default='dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented', help='Path to CCST augmented dataset (styled BUS-UCLM)')
+    parser.add_argument('--styled_dataset_path', type=str, default='dataset/BioMedicalDataset/BUS-UCLM-Hybrid-Medium', help='Path to styled dataset for simple concatenation approach')
     parser.add_argument('--test_data_type', type=str, required=False, choices=['CVC-ClinicDB', 'Kvasir', 'CVC-300', 'CVC-ColonDB', 'ETIS-LaribPolypDB',
                                                                                             'DSB2018', 'MonuSeg2018', 'ISIC2018', 'PH2', 'COVID19', 'COVID19_2', 'BUSI', 'STU', 'BUS-UCLM'])
 
