@@ -38,11 +38,11 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
     
     df = pd.read_csv(csv_path)
     
-            # Create output directories (use 'images' and 'masks' to match BUSUCLMSegmentationDataset)
-        os.makedirs(os.path.join(output_dir, 'benign', 'images'), exist_ok=True)
-        os.makedirs(os.path.join(output_dir, 'benign', 'masks'), exist_ok=True)
-        os.makedirs(os.path.join(output_dir, 'malignant', 'images'), exist_ok=True)
-        os.makedirs(os.path.join(output_dir, 'malignant', 'masks'), exist_ok=True)
+    # Create output directories (use 'images' and 'masks' to match BUSUCLMSegmentationDataset)
+    os.makedirs(os.path.join(output_dir, 'benign', 'images'), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, 'benign', 'masks'), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, 'malignant', 'images'), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, 'malignant', 'masks'), exist_ok=True)
     
     styled_samples = []
     
