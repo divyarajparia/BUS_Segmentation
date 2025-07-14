@@ -59,9 +59,13 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
             # Get source paths
             source_image_path = style_transfer._get_image_path(row, source_dataset_path)
             
-            # Generate output paths
-            output_filename = f"hybrid_{complexity}_{os.path.basename(image_path_info)}"
-            output_mask_filename = f"hybrid_{complexity}_{os.path.basename(mask_path_info)}"
+            # Generate output paths - fix basename extraction
+            # image_path_info format: "benign FILENAME.png"
+            actual_image_filename = image_path_info.split(' ', 1)[1] if ' ' in image_path_info else image_path_info
+            actual_mask_filename = mask_path_info.split(' ', 1)[1] if ' ' in mask_path_info else mask_path_info
+            
+            output_filename = f"hybrid_{complexity}_{actual_image_filename}"
+            output_mask_filename = f"hybrid_{complexity}_{actual_mask_filename}"
             
             output_image_path = os.path.join(output_dir, class_type, 'image', output_filename)
             output_mask_path = os.path.join(output_dir, class_type, 'mask', output_mask_filename)

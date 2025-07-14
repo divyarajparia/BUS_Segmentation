@@ -209,13 +209,265 @@ class HybridMedicalStyleTransfer:
         print("   Using HEAVY complexity (full features)")
         print("   WARNING: This may cause OOM on systems with <16GB RAM")
         
-        # Even smaller batches for heavy processing
-        batch_size = max(10, self.batch_size // 5)
+        # Smaller batches for heavy processing to manage memory
+        heavy_batch_size = max(5, self.batch_size // 10)  # Very small batches
         
-        # This would contain the full complex feature extraction
-        # For now, fall back to medium to prevent OOM
-        print("   Falling back to MEDIUM complexity for safety")
-        return self._extract_medium_statistics(df, dataset_path, save_path)
+        streaming_stats = {
+            'count': 0,
+            'intensity_sum': 0.0,
+            'intensity_sum_sq': 0.0,
+            'percentile_samples': [],
+            'edge_density_sum': 0.0,
+            'contrast_sum': 0.0,
+            'histogram_accumulator': np.zeros(256),  # Higher resolution
+            
+            # Heavy complexity features
+            'glcm_contrast_sum': 0.0,
+            'glcm_dissimilarity_sum': 0.0,
+            'glcm_homogeneity_sum': 0.0,
+            'glcm_energy_sum': 0.0,
+            'lbp_histogram_accumulator': np.zeros(256),
+            'gabor_responses_accumulator': [],
+            'morphological_features_sum': np.zeros(6),  # 6 morphological features
+            'frequency_features_sum': np.zeros(4),  # 4 frequency domain features
+            'texture_energy_sum': 0.0,
+            'local_entropy_sum': 0.0,
+            'fractal_dimension_sum': 0.0,
+        }
+        
+        total_images = len(df)
+        num_batches = (total_images + heavy_batch_size - 1) // heavy_batch_size
+        
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * heavy_batch_size
+            end_idx = min(start_idx + heavy_batch_size, total_images)
+            
+            print(f"   Processing heavy batch {batch_idx + 1}/{num_batches}")
+            
+            for idx in range(start_idx, end_idx):
+                try:
+                    row = df.iloc[idx]
+                    image_path = self._get_image_path(row, dataset_path)
+                    if not os.path.exists(image_path):
+                        continue
+                    
+                    image = Image.open(image_path).convert('L')
+                    image_array = np.array(image, dtype=np.float32) / 255.0
+                    
+                    # Resize to manageable size for heavy processing
+                    if image_array.shape[0] * image_array.shape[1] > 512 * 512:
+                        image_pil = Image.fromarray((image_array * 255).astype(np.uint8))
+                        image_pil = image_pil.resize((512, 512), Image.LANCZOS)
+                        image_array = np.array(image_pil, dtype=np.float32) / 255.0
+                    
+                    # Extract heavy features
+                    heavy_features = self._extract_heavy_features(image_array)
+                    
+                    # Accumulate basic stats
+                    flat = image_array.flatten()
+                    streaming_stats['count'] += 1
+                    streaming_stats['intensity_sum'] += np.mean(flat)
+                    streaming_stats['intensity_sum_sq'] += np.mean(flat) ** 2
+                    
+                    # Sample for percentiles (limit memory)
+                    sample_size = min(1000, len(flat))
+                    sample_indices = np.random.choice(len(flat), sample_size, replace=False)
+                    samples = flat[sample_indices]
+                    streaming_stats['percentile_samples'].extend(samples[:100])  # Limit samples
+                    
+                    # Basic features
+                    edges = filters.sobel(image_array)
+                    streaming_stats['edge_density_sum'] += np.mean(edges > 0.1)
+                    streaming_stats['contrast_sum'] += np.std(flat)
+                    
+                    # High-resolution histogram
+                    hist, _ = np.histogram(flat, bins=256, range=(0, 1), density=True)
+                    streaming_stats['histogram_accumulator'] += hist
+                    
+                    # Accumulate heavy features
+                    streaming_stats['glcm_contrast_sum'] += heavy_features['glcm_contrast']
+                    streaming_stats['glcm_dissimilarity_sum'] += heavy_features['glcm_dissimilarity']
+                    streaming_stats['glcm_homogeneity_sum'] += heavy_features['glcm_homogeneity']
+                    streaming_stats['glcm_energy_sum'] += heavy_features['glcm_energy']
+                    
+                    streaming_stats['lbp_histogram_accumulator'] += heavy_features['lbp_histogram']
+                    streaming_stats['morphological_features_sum'] += heavy_features['morphological_features']
+                    streaming_stats['frequency_features_sum'] += heavy_features['frequency_features']
+                    streaming_stats['texture_energy_sum'] += heavy_features['texture_energy']
+                    streaming_stats['local_entropy_sum'] += heavy_features['local_entropy']
+                    streaming_stats['fractal_dimension_sum'] += heavy_features['fractal_dimension']
+                    
+                    # Gabor responses (limit to prevent memory explosion)
+                    if len(streaming_stats['gabor_responses_accumulator']) < 1000:
+                        streaming_stats['gabor_responses_accumulator'].extend(heavy_features['gabor_responses'][:10])
+                    
+                except Exception as e:
+                    print(f"   Warning: Failed to process image {idx}: {e}")
+                    continue
+            
+            # Force garbage collection every batch
+            gc.collect()
+            
+            # Limit percentile samples to prevent memory explosion
+            if len(streaming_stats['percentile_samples']) > 50000:
+                streaming_stats['percentile_samples'] = streaming_stats['percentile_samples'][:50000]
+        
+        return self._finalize_heavy_stats(streaming_stats, save_path)
+    
+    def _extract_heavy_features(self, image_array):
+        """Extract comprehensive heavy features from image."""
+        features = {}
+        
+        # Convert to 8-bit for some feature extractors
+        image_8bit = (image_array * 255).astype(np.uint8)
+        
+        # GLCM features (Gray-Level Co-occurrence Matrix)
+        try:
+            from skimage.feature import graycomatrix, graycoprops
+            # Reduce levels for memory efficiency
+            glcm = graycomatrix(image_8bit, distances=[1], angles=[0, np.pi/4, np.pi/2, 3*np.pi/4], 
+                               levels=16, symmetric=True, normed=True)
+            features['glcm_contrast'] = np.mean(graycoprops(glcm, 'contrast'))
+            features['glcm_dissimilarity'] = np.mean(graycoprops(glcm, 'dissimilarity'))
+            features['glcm_homogeneity'] = np.mean(graycoprops(glcm, 'homogeneity'))
+            features['glcm_energy'] = np.mean(graycoprops(glcm, 'energy'))
+        except:
+            features['glcm_contrast'] = 0.0
+            features['glcm_dissimilarity'] = 0.0
+            features['glcm_homogeneity'] = 0.0
+            features['glcm_energy'] = 0.0
+        
+        # LBP features (Local Binary Patterns)
+        try:
+            from skimage.feature import local_binary_pattern
+            radius = 3
+            n_points = 8 * radius
+            lbp = local_binary_pattern(image_array, n_points, radius, method='uniform')
+            # Create histogram
+            lbp_hist, _ = np.histogram(lbp.ravel(), bins=256, range=(0, 256), density=True)
+            features['lbp_histogram'] = lbp_hist
+        except:
+            features['lbp_histogram'] = np.zeros(256)
+        
+        # Gabor filter responses
+        try:
+            from skimage.filters import gabor
+            gabor_responses = []
+            # Multiple orientations and frequencies
+            for theta in [0, np.pi/4, np.pi/2, 3*np.pi/4]:
+                for frequency in [0.1, 0.3]:
+                    try:
+                        filtered_real, _ = gabor(image_array, frequency=frequency, theta=theta)
+                        gabor_responses.append(np.mean(np.abs(filtered_real)))
+                    except:
+                        gabor_responses.append(0.0)
+            features['gabor_responses'] = gabor_responses[:8]  # Limit to 8 responses
+        except:
+            features['gabor_responses'] = [0.0] * 8
+        
+        # Morphological features
+        try:
+            from skimage.morphology import opening, closing, erosion, dilation, disk
+            selem = disk(3)
+            opened = opening(image_8bit, selem)
+            closed = closing(image_8bit, selem)
+            eroded = erosion(image_8bit, selem)
+            dilated = dilation(image_8bit, selem)
+            
+            morph_features = [
+                np.mean(opened),
+                np.mean(closed),
+                np.mean(eroded),
+                np.mean(dilated),
+                np.std(opened - image_8bit),
+                np.std(closed - image_8bit)
+            ]
+            features['morphological_features'] = np.array(morph_features)
+        except:
+            features['morphological_features'] = np.zeros(6)
+        
+        # Frequency domain features
+        try:
+            # FFT analysis
+            fft = np.fft.fft2(image_array)
+            fft_shifted = np.fft.fftshift(fft)
+            magnitude_spectrum = np.abs(fft_shifted)
+            
+            # Frequency features
+            freq_features = [
+                np.mean(magnitude_spectrum),
+                np.std(magnitude_spectrum),
+                np.mean(magnitude_spectrum[magnitude_spectrum.shape[0]//4:3*magnitude_spectrum.shape[0]//4,
+                                       magnitude_spectrum.shape[1]//4:3*magnitude_spectrum.shape[1]//4]),  # Center energy
+                np.sum(magnitude_spectrum > np.percentile(magnitude_spectrum, 95))  # High frequency components
+            ]
+            features['frequency_features'] = np.array(freq_features)
+        except:
+            features['frequency_features'] = np.zeros(4)
+        
+        # Texture energy
+        try:
+            # Laws' texture measures
+            # L5 = [1, 4, 6, 4, 1]  # Level
+            # E5 = [-1, -2, 0, 2, 1]  # Edge
+            # Simple energy measure
+            grad_x = np.gradient(image_array, axis=1)
+            grad_y = np.gradient(image_array, axis=0)
+            texture_energy = np.mean(grad_x**2 + grad_y**2)
+            features['texture_energy'] = texture_energy
+        except:
+            features['texture_energy'] = 0.0
+        
+        # Local entropy
+        try:
+            from skimage.filters.rank import entropy
+            from skimage.morphology import disk
+            local_entropy = entropy(image_8bit, disk(5))
+            features['local_entropy'] = np.mean(local_entropy)
+        except:
+            features['local_entropy'] = 0.0
+        
+        # Fractal dimension (box-counting method approximation)
+        try:
+            def fractal_dimension(image, max_box_size=64):
+                # Simple box counting approximation
+                sizes = []
+                counts = []
+                
+                for size in [2, 4, 8, 16, 32]:
+                    if size > min(image.shape) // 4:
+                        break
+                    
+                    # Threshold image
+                    thresh = image > np.mean(image)
+                    
+                    # Count boxes containing edges
+                    h, w = thresh.shape
+                    count = 0
+                    for i in range(0, h - size, size):
+                        for j in range(0, w - size, size):
+                            box = thresh[i:i+size, j:j+size]
+                            if np.any(box) and not np.all(box):
+                                count += 1
+                    
+                    if count > 0:
+                        sizes.append(size)
+                        counts.append(count)
+                
+                if len(sizes) >= 2:
+                    # Fit line to log-log plot
+                    log_sizes = np.log(sizes)
+                    log_counts = np.log(counts)
+                    slope, _ = np.polyfit(log_sizes, log_counts, 1)
+                    return -slope
+                else:
+                    return 1.5  # Default fractal dimension
+            
+            features['fractal_dimension'] = fractal_dimension(image_array)
+        except:
+            features['fractal_dimension'] = 1.5
+        
+        return features
     
     def _extract_medium_intensity(self, image):
         """Extract medium complexity intensity features."""
@@ -317,6 +569,8 @@ class HybridMedicalStyleTransfer:
     def apply_medical_style_transfer(self, source_image_path, target_stats, output_path):
         """Apply style transfer based on complexity level."""
         source_image = Image.open(source_image_path).convert('L')
+        # CRITICAL: Resize to 256x256 for consistency with BUSI dataset
+        source_image = source_image.resize((256, 256), Image.LANCZOS)
         source_array = np.array(source_image, dtype=np.float32) / 255.0
         
         if self.complexity == 'light':
@@ -324,7 +578,7 @@ class HybridMedicalStyleTransfer:
         elif self.complexity == 'medium':
             styled_image = self._medium_style_transfer(source_array, target_stats)
         else:  # heavy
-            styled_image = self._medium_style_transfer(source_array, target_stats)  # Fallback
+            styled_image = self._heavy_style_transfer(source_array, target_stats)
         
         # Convert and save
         styled_uint8 = np.clip(styled_image * 255, 0, 255).astype(np.uint8)
@@ -398,6 +652,154 @@ class HybridMedicalStyleTransfer:
         
         return smoothed.astype(np.float32) / 255.0
     
+    def _heavy_style_transfer(self, source_image, target_stats):
+        """Heavy complexity style transfer with comprehensive feature matching."""
+        # Advanced style transfer using full feature set
+        
+        # Step 1: Enhanced intensity matching using high-resolution histogram
+        target_intensity = target_stats['intensity_distributions'][0]
+        target_mean = target_intensity['mean']
+        target_std = target_intensity['std']
+        target_histogram = np.array(target_intensity['histogram'])
+        
+        # High-resolution histogram matching
+        source_hist, bins = np.histogram(source_image, bins=256, range=(0, 1), density=True)
+        
+        # Create CDF for histogram matching
+        source_cdf = np.cumsum(source_hist)
+        target_cdf = np.cumsum(target_histogram)
+        
+        # Normalize CDFs
+        source_cdf = source_cdf / source_cdf[-1]
+        target_cdf = target_cdf / target_cdf[-1]
+        
+        # Create mapping using inverse CDF
+        mapping = np.interp(source_cdf, target_cdf, np.linspace(0, 1, 256))
+        
+        # Apply histogram matching
+        source_indices = np.digitize(source_image, bins[:-1]) - 1
+        source_indices = np.clip(source_indices, 0, 255)
+        styled = mapping[source_indices]
+        
+        # Step 2: Texture feature matching using GLCM properties
+        target_edge = target_stats['edge_characteristics'][0]
+        target_glcm_contrast = target_edge['avg_glcm_contrast']
+        target_glcm_homogeneity = target_edge['avg_glcm_homogeneity']
+        
+        # Extract current GLCM features
+        current_features = self._extract_heavy_features(styled)
+        current_contrast = current_features['glcm_contrast']
+        current_homogeneity = current_features['glcm_homogeneity']
+        
+        # Adjust contrast to match target
+        if current_contrast > 1e-8:
+            contrast_ratio = target_glcm_contrast / (current_contrast + 1e-8)
+            # Apply adaptive contrast enhancement
+            mean_val = np.mean(styled)
+            styled = mean_val + (styled - mean_val) * contrast_ratio
+        
+        # Step 3: Morphological feature matching
+        target_freq = target_stats['frequency_features'][0]
+        target_morph = np.array(target_freq['avg_morphological_features'])
+        
+        # Apply morphological operations to match target characteristics
+        styled_uint8 = np.clip(styled * 255, 0, 255).astype(np.uint8)
+        
+        # Adaptive morphological operations based on target features
+        from skimage.morphology import opening, closing, disk
+        
+        # Calculate optimal kernel size based on target morphological features
+        kernel_size = max(1, int(np.mean(target_morph[:2]) / 50))  # Scale based on target
+        kernel_size = min(kernel_size, 5)  # Limit to reasonable size
+        
+        selem = disk(kernel_size)
+        
+        # Balance opening and closing based on target features
+        opening_weight = target_morph[0] / (target_morph[0] + target_morph[1] + 1e-8)
+        closing_weight = 1 - opening_weight
+        
+        if opening_weight > 0.5:
+            morphed = opening(styled_uint8, selem)
+            styled_uint8 = (opening_weight * morphed + (1 - opening_weight) * styled_uint8).astype(np.uint8)
+        else:
+            morphed = closing(styled_uint8, selem)
+            styled_uint8 = (closing_weight * morphed + (1 - closing_weight) * styled_uint8).astype(np.uint8)
+        
+        # Step 4: Frequency domain enhancement
+        target_freq_features = np.array(target_freq['avg_frequency_features'])
+        
+        # FFT-based enhancement
+        fft = np.fft.fft2(styled_uint8.astype(np.float32))
+        fft_shifted = np.fft.fftshift(fft)
+        magnitude = np.abs(fft_shifted)
+        phase = np.angle(fft_shifted)
+        
+        # Enhance frequency components based on target characteristics
+        h, w = magnitude.shape
+        center_x, center_y = h // 2, w // 2
+        
+        # Create frequency mask based on target features
+        y, x = np.ogrid[:h, :w]
+        dist_from_center = np.sqrt((x - center_x)**2 + (y - center_y)**2)
+        
+        # Adjust high frequencies based on target
+        high_freq_enhancement = target_freq_features[3] / (np.mean(magnitude) + 1e-8)
+        high_freq_enhancement = np.clip(high_freq_enhancement, 0.5, 2.0)
+        
+        freq_mask = np.ones_like(magnitude)
+        freq_mask[dist_from_center > min(h, w) * 0.3] *= high_freq_enhancement
+        
+        enhanced_magnitude = magnitude * freq_mask
+        enhanced_fft = enhanced_magnitude * np.exp(1j * phase)
+        enhanced_fft_shifted = np.fft.ifftshift(enhanced_fft)
+        enhanced_image = np.real(np.fft.ifft2(enhanced_fft_shifted))
+        
+        # Step 5: Texture energy preservation
+        target_texture = target_stats['texture_features'][0]
+        target_energy = target_texture['avg_energy']
+        
+        # Calculate current texture energy
+        grad_x = np.gradient(enhanced_image, axis=1)
+        grad_y = np.gradient(enhanced_image, axis=0)
+        current_energy = np.mean(grad_x**2 + grad_y**2)
+        
+        # Adjust to match target texture energy
+        if current_energy > 1e-8:
+            energy_ratio = np.sqrt(target_energy / (current_energy + 1e-8))
+            energy_ratio = np.clip(energy_ratio, 0.5, 2.0)
+            
+            # Apply edge-preserving enhancement
+            enhanced_edges = cv2.bilateralFilter(
+                enhanced_image.astype(np.uint8), 
+                9, 
+                int(75 * energy_ratio), 
+                int(75 * energy_ratio)
+            )
+            enhanced_image = enhanced_edges
+        
+        # Step 6: Local entropy matching
+        target_entropy = target_texture['avg_local_entropy']
+        
+        # Apply adaptive histogram equalization if needed
+        if target_entropy > 50:  # High entropy target
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            enhanced_image = clahe.apply(enhanced_image.astype(np.uint8))
+        
+        # Step 7: Final normalization and clamping
+        final_image = enhanced_image.astype(np.float32) / 255.0
+        final_image = np.clip(final_image, 0, 1)
+        
+        # Ensure target mean and std are approximately maintained
+        current_mean = np.mean(final_image)
+        current_std = np.std(final_image)
+        
+        if current_std > 1e-8:
+            final_image = (final_image - current_mean) / current_std
+            final_image = final_image * target_std + target_mean
+            final_image = np.clip(final_image, 0, 1)
+        
+        return final_image
+    
     # Helper methods and finalization functions...
     def _finalize_light_stats(self, streaming_stats, save_path):
         """Finalize light complexity statistics."""
@@ -457,6 +859,69 @@ class HybridMedicalStyleTransfer:
             }],
             'edge_characteristics': [{
                 'avg_density': np.mean(streaming_stats['edge_stats']) if streaming_stats['edge_stats'] else 0.3
+            }]
+        }
+        
+        if save_path:
+            self._save_statistics(final_stats, save_path)
+        
+        return final_stats
+    
+    def _finalize_heavy_stats(self, streaming_stats, save_path):
+        """Finalize heavy complexity statistics."""
+        count = streaming_stats['count']
+        if count == 0:
+            raise ValueError("No valid images processed")
+        
+        # Aggregate heavy stats
+        mean_intensity = streaming_stats['intensity_sum'] / count
+        std_intensity = np.sqrt(streaming_stats['intensity_sum_sq'] / count - mean_intensity**2)
+        
+        if streaming_stats['percentile_samples']:
+            percentiles = np.percentile(streaming_stats['percentile_samples'], [10, 25, 50, 75, 90])
+        else:
+            percentiles = [0.2, 0.3, 0.5, 0.7, 0.8]
+        
+        histogram = streaming_stats['histogram_accumulator'] / count
+        
+        # Aggregate heavy features
+        avg_glcm_contrast = streaming_stats['glcm_contrast_sum'] / count
+        avg_glcm_dissimilarity = streaming_stats['glcm_dissimilarity_sum'] / count
+        avg_glcm_homogeneity = streaming_stats['glcm_homogeneity_sum'] / count
+        avg_glcm_energy = streaming_stats['glcm_energy_sum'] / count
+        
+        avg_lbp_histogram = streaming_stats['lbp_histogram_accumulator'] / count
+        avg_morphological_features = streaming_stats['morphological_features_sum'] / count
+        avg_frequency_features = streaming_stats['frequency_features_sum'] / count
+        avg_texture_energy = streaming_stats['texture_energy_sum'] / count
+        avg_local_entropy = streaming_stats['local_entropy_sum'] / count
+        avg_fractal_dimension = streaming_stats['fractal_dimension_sum'] / count
+        
+        final_stats = {
+            'processed_images': count,
+            'intensity_distributions': [{
+                'mean': mean_intensity,
+                'std': std_intensity,
+                'percentiles': percentiles.tolist(),
+                'histogram': histogram.tolist(),
+                'contrast': streaming_stats['contrast_sum'] / count
+            }],
+            'texture_features': [{
+                'avg_energy': avg_texture_energy,
+                'avg_local_entropy': avg_local_entropy,
+                'avg_fractal_dimension': avg_fractal_dimension
+            }],
+            'edge_characteristics': [{
+                'avg_density': streaming_stats['edge_density_sum'] / count,
+                'avg_glcm_contrast': avg_glcm_contrast,
+                'avg_glcm_dissimilarity': avg_glcm_dissimilarity,
+                'avg_glcm_homogeneity': avg_glcm_homogeneity,
+                'avg_glcm_energy': avg_glcm_energy
+            }],
+            'frequency_features': [{
+                'avg_lbp_histogram_std': np.std(avg_lbp_histogram),
+                'avg_morphological_features': avg_morphological_features.tolist(),
+                'avg_frequency_features': avg_frequency_features.tolist()
             }]
         }
         
