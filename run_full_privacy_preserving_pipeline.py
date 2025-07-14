@@ -36,7 +36,7 @@ def run_full_pipeline():
     print("\n🎨 Step 2: Generating Full BUSI-styled BUS-UCLM Dataset")
     
     # Method selection based on testing results
-    method = 'gradient_based'  # Best performing method
+    method = 'histogram_matching'  # More conservative, better for medical images
     output_dir = 'dataset/BioMedicalDataset/BUS-UCLM-Privacy-Styled'
     
     print(f"   Using method: {method}")
