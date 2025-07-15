@@ -22,7 +22,7 @@ def IS2D_main(args) :
         print("Please explicitely write the dataset type")
         sys.exit()
 
-    if args.train_data_type in ['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined', 'BUSI-CCST']:
+    if args.train_data_type in ['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined', 'BUSI-CCST', 'BUS-UCLM-Reverse']:
         args.num_channels = 3
         args.image_size = 352
         args.num_classes = 1
@@ -43,7 +43,7 @@ def IS2D_main(args) :
 if __name__=='__main__' :
     parser = argparse.ArgumentParser(description='Following are the arguments that can be passed form the terminal itself!')
     parser.add_argument('--data_path', type=str, default='dataset/BioMedicalDataset')
-    parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined', 'BUSI-CCST'])
+    parser.add_argument('--train_data_type', type=str, required=False, choices=['PolypSegData', 'DSB2018', 'ISIC2018', 'COVID19', 'BUSI', 'BUS-UCLM', 'BUSIBUSUCLM', 'BUSI-Combined', 'BUSI-Synthetic-Combined', 'BUSI-CCST', 'BUS-UCLM-Reverse'])
     parser.add_argument('--synthetic_data_dir', type=str, default='synthetic_busi_madgnet', help='Directory containing synthetic BUSI data')
     parser.add_argument('--ccst_augmented_path', type=str, default='dataset/BioMedicalDataset/CCST-Results/BUS-UCLM-CCST-augmented', help='Path to CCST augmented dataset (styled BUS-UCLM)')
     parser.add_argument('--test_data_type', type=str, required=False, choices=['CVC-ClinicDB', 'Kvasir', 'CVC-300', 'CVC-ColonDB', 'ETIS-LaribPolypDB',
@@ -123,5 +123,11 @@ if __name__=='__main__' :
 
     if args.train_data_type == 'BUSI-CCST':
         for test_data_type in ['BUSI']:
+            args.test_data_type = test_data_type
+            IS2D_main(args)
+    
+    # Reverse BUS-UCLM style transfer approach
+    if args.train_data_type == 'BUS-UCLM-Reverse':
+        for test_data_type in ['BUS-UCLM', 'BUSI']:
             args.test_data_type = test_data_type
             IS2D_main(args)

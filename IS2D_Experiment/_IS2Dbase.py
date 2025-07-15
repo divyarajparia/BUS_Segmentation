@@ -17,6 +17,7 @@ from dataset.BioMedicalDataset.BUSISegmentationDataset import *
 from dataset.BioMedicalDataset.STUSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSUCLMSegmentationDataset import *
 from dataset.BioMedicalDataset.BUSICombinedDataset import *
+from dataset.BioMedicalDataset.BUSUCLMReverseDataset import BUSUCLMReverseDataset
 from utils.get_functions import *
 from torch.utils.data import ConcatDataset
 
@@ -116,6 +117,17 @@ class BaseSegmentationExperiment(object):
                 transform=train_image_transform,
                 target_transform=train_target_transform,
                 combine_with_original=True  # Include original BUSI data directly
+            )
+        elif self.args.train_data_type == 'BUS-UCLM-Reverse':
+            # Use reverse approach: BUS-UCLM + BUSI styled with BUS-UCLM style
+            print("🔄 Loading BUS-UCLM + Reverse styled BUSI training dataset...")
+            from dataset.BioMedicalDataset.BUSUCLMReverseDataset import BUSUCLMReverseDataset
+            train_dataset = BUSUCLMReverseDataset(
+                dataset_dir=os.path.join(self.args.data_path, 'BUS-UCLM'),
+                mode='train',
+                transform=train_image_transform,
+                target_transform=train_target_transform,
+                ccst_augmented_path=self.args.ccst_augmented_path
             )
 
 
