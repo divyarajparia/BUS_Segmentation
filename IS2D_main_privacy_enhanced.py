@@ -220,6 +220,14 @@ def IS2D_main_enhanced(args):
     print("🔐 Privacy-Enhanced 2D Image Segmentation Training!")
     print(f"Privacy Method: {getattr(args, 'privacy_method', 'frequency')}")
     print(f"Adaptation Strength: {getattr(args, 'adaptation_strength', 0.7)}")
+    
+    # Print seed fixing status for transparency
+    if args.seed_fix:
+        print("🔒 REPRODUCIBLE MODE: Random seeds fixed (seed=4321)")
+        print("   → Training results will be consistent across runs")
+    else:
+        print("🎲 NON-REPRODUCIBLE MODE: Random seeds NOT fixed")
+        print("   → Training results will vary between runs")
 
     try:
         args.train_dataset_dir = os.path.join(args.data_path, args.train_data_type)
@@ -305,6 +313,12 @@ if __name__ == '__main__':
                        help='Privacy preservation method to use')
     parser.add_argument('--adaptation_strength', type=float, default=0.7,
                        help='Strength of privacy adaptation (0.0-1.0)')
+    parser.add_argument('--no_seed_fix', action='store_true',
+                       help='Disable seed fixing for non-reproducible results')
     
     args = parser.parse_args()
+    
+    # Enable seed fixing by default for consistent results
+    args.seed_fix = not args.no_seed_fix
+    
     IS2D_main_enhanced(args) 
