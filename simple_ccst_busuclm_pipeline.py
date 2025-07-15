@@ -73,9 +73,7 @@ def main():
         --test_data_type BUS-UCLM \
         --final_epoch 50 \
         --train \
-        --device cuda \
         --save_path baseline_busuclm_{timestamp}.pth \
-        --image_size 352 \
         --batch_size 4"""
     
     if not run_command(baseline_cmd, "BUS-UCLM baseline training"):
