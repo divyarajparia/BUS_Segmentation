@@ -335,10 +335,10 @@ class CCSTStyleExtractor:
             stylized_image = self.style_transfer_model(content_image, style_mean, style_std, alpha)
             
             # Ensure proper range [0, 1]
-            stylized_image = torch.clamp(stylized_image, 0, 1)
+                stylized_image = torch.clamp(stylized_image, 0, 1)
             
             return stylized_image
-
+    
 # ============================================================================
 # Dataset for Decoder Training
 # ============================================================================
@@ -465,7 +465,7 @@ class CCSTDataset(Dataset):
                 
                 # Convert back to PIL (grayscale)
                 stylized_tensor = stylized_tensor.squeeze(0).cpu().clamp(0, 1)
-                stylized_image = to_pil_image(stylized_tensor)
+                    stylized_image = to_pil_image(stylized_tensor)
                 
                 # Convert to grayscale if needed
                 if stylized_image.mode != 'L':
@@ -493,11 +493,11 @@ class CCSTDataset(Dataset):
         output_mask_dir = os.path.join(self.output_dir, class_type, 'mask')
         os.makedirs(output_image_dir, exist_ok=True)
         os.makedirs(output_mask_dir, exist_ok=True)
-        
+
         # Save styled image and copy mask
         styled_image_path = os.path.join(output_image_dir, styled_filename)
         styled_mask_path = os.path.join(output_mask_dir, styled_mask_filename)
-        
+
         stylized_image.save(styled_image_path)
         mask.save(styled_mask_path)
         
@@ -545,9 +545,9 @@ def run_ccst_pipeline(source_dataset, source_csv, target_dataset, target_csv,
     for i in tqdm(range(len(ccst_dataset)), desc="Applying PROPER BUSI style to BUS-UCLM"):
         result = ccst_dataset[i]
         styled_data.append({
-            'styled_image_path': result['styled_image_path'],
-            'styled_mask_path': result['styled_mask_path']
-        })
+                'styled_image_path': result['styled_image_path'],
+                'styled_mask_path': result['styled_mask_path']
+            })
     
     # Step 3: Create styled dataset CSV
     print(f"\n📋 Step 3: Creating BUSI-styled BUS-UCLM dataset CSV...")

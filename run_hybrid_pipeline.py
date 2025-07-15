@@ -38,11 +38,11 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
     
     df = pd.read_csv(csv_path)
     
-    # Create output directories (use 'images' and 'masks' to match BUSUCLMSegmentationDataset)
-    os.makedirs(os.path.join(output_dir, 'benign', 'images'), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, 'benign', 'masks'), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, 'malignant', 'images'), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, 'malignant', 'masks'), exist_ok=True)
+    # Create output directories
+    os.makedirs(os.path.join(output_dir, 'benign', 'image'), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, 'benign', 'mask'), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, 'malignant', 'image'), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, 'malignant', 'mask'), exist_ok=True)
     
     styled_samples = []
     
@@ -67,8 +67,8 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
             output_filename = f"hybrid_{complexity}_{actual_image_filename}"
             output_mask_filename = f"hybrid_{complexity}_{actual_mask_filename}"
             
-            output_image_path = os.path.join(output_dir, class_type, 'images', output_filename)
-            output_mask_path = os.path.join(output_dir, class_type, 'masks', output_mask_filename)
+            output_image_path = os.path.join(output_dir, class_type, 'image', output_filename)
+            output_mask_path = os.path.join(output_dir, class_type, 'mask', output_mask_filename)
             
             # Apply hybrid style transfer
             style_transfer.apply_medical_style_transfer(
@@ -125,55 +125,6 @@ def generate_hybrid_styled_dataset(source_dataset_path, source_csv, target_stats
     print(f"📄 CSV file: {styled_csv_path}")
     
     return styled_samples
-
-
-def create_simple_styled_csv(styled_dir, complexity):
-    """Create simple train_frame.csv for styled dataset (compatible with BUSUCLMSegmentationDataset)."""
-    print(f"📝 Creating simple CSV for {complexity} styled dataset...")
-    
-    samples = []
-    
-    # Check benign images
-    benign_image_dir = os.path.join(styled_dir, 'benign', 'images')
-    benign_mask_dir = os.path.join(styled_dir, 'benign', 'masks')
-    
-    if os.path.exists(benign_image_dir):
-        for filename in sorted(os.listdir(benign_image_dir)):
-            if filename.endswith('.png'):
-                mask_filename = filename  # Mask has same name as image
-                samples.append({
-                    'image_path': f'benign {filename}',
-                    'mask_path': f'benign {mask_filename}'
-                })
-    
-    # Check malignant images  
-    malignant_image_dir = os.path.join(styled_dir, 'malignant', 'images')
-    malignant_mask_dir = os.path.join(styled_dir, 'malignant', 'masks')
-    
-    if os.path.exists(malignant_image_dir):
-        for filename in sorted(os.listdir(malignant_image_dir)):
-            if filename.endswith('.png'):
-                mask_filename = filename  # Mask has same name as image
-                samples.append({
-                    'image_path': f'malignant {filename}',
-                    'mask_path': f'malignant {mask_filename}'
-                })
-    
-    # Save simple CSV
-    csv_path = os.path.join(styled_dir, 'train_frame.csv')
-    df = pd.DataFrame(samples)
-    df.to_csv(csv_path, index=False)
-    
-    benign_count = len([s for s in samples if s['image_path'].startswith('benign')])
-    malignant_count = len([s for s in samples if s['image_path'].startswith('malignant')])
-    
-    print(f"   ✅ Simple CSV created: {len(samples)} styled samples")
-    print(f"   📊 Breakdown:")
-    print(f"      Benign: {benign_count}")
-    print(f"      Malignant: {malignant_count}")
-    print(f"   📄 Saved to: {csv_path}")
-    
-    return csv_path
 
 
 def create_hybrid_combined_csv(styled_dir, complexity):
@@ -288,23 +239,23 @@ def run_complete_hybrid_pipeline(complexity='medium'):
     print(f"   ⏱️  Generation time: {generation_time:.1f} seconds")
     print(f"   📊 Generated: {len(styled_samples)} styled images")
     
-    # Step 3: Create simple CSV for styled dataset
-    print(f"\n📝 Step 3: Creating Simple CSV for Styled Dataset")
-    styled_csv_path = create_simple_styled_csv(output_dir, complexity)
+    # Step 3: Create combined CSV
+    print(f"\n📝 Step 3: Creating Combined Training CSV")
+    combined_csv_path = create_hybrid_combined_csv(output_dir, complexity)
     
     # Step 4: Print training command
     print(f"\n🎯 Step 4: Training Command")
     print("=" * 50)
     print("Copy and paste this command to train:")
     print()
-    print(f"python IS2D_main.py --train_data_type BUSI-CCST --test_data_type BUSI --styled_dataset_path {output_dir} --train --final_epoch 100")
+    print(f"python IS2D_main.py --train_data_type BUSI-CCST --test_data_type BUSI --ccst_augmented_path {output_dir} --train --final_epoch 100")
     print()
     print("=" * 50)
     
     print(f"\n🎉 Hybrid Pipeline Complete ({complexity} complexity)!")
     print("📋 Summary:")
     print(f"   Generated dataset: {output_dir}")
-    print(f"   Styled CSV: {styled_csv_path}")
+    print(f"   Combined CSV: {combined_csv_path}")
     print(f"   Expected Dice: {get_expected_performance(complexity)}")
     print(f"   Ready for training with IS2D_main.py!")
 
