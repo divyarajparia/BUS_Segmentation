@@ -295,7 +295,9 @@ class FederatedAlignmentPipeline:
                 if isinstance(predictions, list):
                     predictions = predictions[0]  # Use map output
                 
-                dice, iou = compute_dice_iou_metrics(predictions, masks)
+                # Convert logits to probabilities for metrics calculation
+                predictions_prob = torch.sigmoid(predictions)
+                dice, iou = compute_dice_iou_metrics(predictions_prob, masks)
                 total_dice += dice * images.size(0)
                 total_iou += iou * images.size(0)
                 num_samples += images.size(0)

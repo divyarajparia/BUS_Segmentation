@@ -269,6 +269,9 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
                 if isinstance(predictions, list):
                     predictions = predictions[0]  # Use map output
                 
+                # Convert logits to probabilities for metrics calculation
+                predictions = torch.sigmoid(predictions)
+                
                 metrics_dict = compute_dice_iou_metrics(predictions, masks)
                 epoch_dice += metrics_dict['dice']
                 epoch_iou += metrics_dict['iou']
@@ -310,12 +313,13 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
                 if isinstance(predictions, list):
                     predictions = predictions[0]  # Use map output
                 
-                # Compute loss
+                # Compute loss (with raw logits)
                 loss = self.criterion(predictions, masks)
                 val_loss += loss.item()
                 
-                # Compute metrics
-                metrics_dict = compute_dice_iou_metrics(predictions, masks)
+                # Compute metrics (convert logits to probabilities)
+                predictions_prob = torch.sigmoid(predictions)
+                metrics_dict = compute_dice_iou_metrics(predictions_prob, masks)
                 val_dice += metrics_dict['dice']
                 val_iou += metrics_dict['iou']
         
