@@ -269,9 +269,9 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
                 if isinstance(predictions, list):
                     predictions = predictions[0]  # Use map output
                 
-                dice, iou = compute_dice_iou_metrics(predictions, masks)
-                epoch_dice += dice
-                epoch_iou += iou
+                metrics_dict = compute_dice_iou_metrics(predictions, masks)
+                epoch_dice += metrics_dict['dice']
+                epoch_iou += metrics_dict['iou']
             
             # Logging
             if batch_idx % self.args.logging_interval == 0:
@@ -315,9 +315,9 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
                 val_loss += loss.item()
                 
                 # Compute metrics
-                dice, iou = compute_dice_iou_metrics(predictions, masks)
-                val_dice += dice
-                val_iou += iou
+                metrics_dict = compute_dice_iou_metrics(predictions, masks)
+                val_dice += metrics_dict['dice']
+                val_iou += metrics_dict['iou']
         
         # Average metrics
         num_batches = len(self.val_data_loader)
@@ -337,6 +337,27 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
         
         if not self.domain_adapter:
             raise ValueError("Domain adapter not initialized! Ensure source statistics are loaded.")
+        
+        # Initialize training components
+        print("🔧 Setting up training components...")
+        
+        # Initialize optimizer
+        self.optimizer = optim.Adam(
+            self.model.parameters(),
+            lr=self.args.learning_rate,
+            weight_decay=self.args.weight_decay
+        )
+        
+        # Initialize loss criterion
+        self.criterion = nn.BCEWithLogitsLoss()
+        
+        # Initialize TensorBoard writer if available
+        if TENSORBOARD_AVAILABLE:
+            self.writer = SummaryWriter(f'runs/federated_training_{int(time.time())}')
+        
+        print(f"   ✅ Optimizer: Adam (lr={self.args.learning_rate}, wd={self.args.weight_decay})")
+        print(f"   ✅ Criterion: BCEWithLogitsLoss")
+        print(f"   ✅ TensorBoard: {'Enabled' if TENSORBOARD_AVAILABLE else 'Disabled'}")
         
         # Training loop
         best_dice = 0.0

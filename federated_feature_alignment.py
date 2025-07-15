@@ -462,20 +462,29 @@ class FederatedDomainAdapter:
         else:
             predictions = self.model(images, mode='test')
         
+        # Helper function to extract main segmentation tensor
+        def extract_main_prediction(pred):
+            """Recursively extract the main segmentation tensor from nested structures."""
+            if isinstance(pred, (list, tuple)):
+                # Recursively get the first element until we find a tensor
+                return extract_main_prediction(pred[0])
+            elif torch.is_tensor(pred):
+                return pred
+            else:
+                raise ValueError(f"Unexpected prediction type: {type(pred)}")
+        
         # Compute segmentation loss
         if isinstance(predictions, list):
             # Multi-scale predictions (training mode)
             seg_loss = 0.0
             for pred_scale in predictions:
-                if isinstance(pred_scale, list):
-                    # Handle [map, distance, boundary] format
-                    seg_loss += segmentation_criterion(pred_scale[0], masks)
-                else:
-                    seg_loss += segmentation_criterion(pred_scale, masks)
+                main_pred = extract_main_prediction(pred_scale)
+                seg_loss += segmentation_criterion(main_pred, masks)
             seg_loss /= len(predictions)
         else:
-            # Single prediction (test mode)
-            seg_loss = segmentation_criterion(predictions, masks)
+            # Single prediction or tuple
+            main_pred = extract_main_prediction(predictions)
+            seg_loss = segmentation_criterion(main_pred, masks)
         
         # Compute feature alignment loss
         alignment_loss = self.compute_feature_alignment_loss()
