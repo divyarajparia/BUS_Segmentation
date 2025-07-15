@@ -536,6 +536,47 @@ def calculate_iou(pred, true):
     metrics_dict = calculator.get_metrics_dict(pred, true)
     return metrics_dict['IoU']
 
+def compute_dice_iou_metrics(pred, true):
+    """
+    Compute both Dice and IoU metrics for batch evaluation.
+    
+    Args:
+        pred: Predicted masks (torch.Tensor or numpy.ndarray)
+        true: Ground truth masks (torch.Tensor or numpy.ndarray)
+    
+    Returns:
+        dict: Dictionary containing 'dice' and 'iou' values
+    """
+    import torch
+    
+    # Handle batch processing
+    if torch.is_tensor(pred) and len(pred.shape) > 2:
+        # Process batch
+        dice_scores = []
+        iou_scores = []
+        
+        for i in range(pred.shape[0]):
+            dice_score = calculate_dice(pred[i:i+1], true[i:i+1])
+            iou_score = calculate_iou(pred[i:i+1], true[i:i+1])
+            dice_scores.append(dice_score)
+            iou_scores.append(iou_score)
+        
+        return {
+            'dice': np.mean(dice_scores),
+            'iou': np.mean(iou_scores),
+            'dice_std': np.std(dice_scores),
+            'iou_std': np.std(iou_scores)
+        }
+    else:
+        # Single image
+        dice_score = calculate_dice(pred, true)
+        iou_score = calculate_iou(pred, true)
+        
+        return {
+            'dice': dice_score,
+            'iou': iou_score
+        }
+
 def calculate_hausdorff(pred, true):
     """Calculate Hausdorff distance between predicted and true masks"""
     import torch

@@ -54,15 +54,15 @@ from federated_feature_alignment import (
 
 # Import existing framework components
 from IS2D_models import IS2D_model
-from IS2D_Experiment._IS2Dbase import IS2DBase
+from IS2D_Experiment._IS2Dbase import BaseSegmentationExperiment
 from dataset.BioMedicalDataset.BUSISegmentationDataset import BUSISegmentationDataset
 from dataset.BioMedicalDataset.BUSUCLMSegmentationDataset import BUSUCLMSegmentationDataset
 from utils.calculate_metrics import compute_dice_iou_metrics
 
 
-class FederatedAlignment_IS2D(IS2DBase):
+class FederatedAlignment_IS2D(BaseSegmentationExperiment):
     """
-    Federated Feature Alignment experiment class extending IS2DBase.
+    Federated Feature Alignment experiment class extending BaseSegmentationExperiment.
     
     This class implements federated domain adaptation using feature alignment
     instead of style transfer for better privacy and performance.
