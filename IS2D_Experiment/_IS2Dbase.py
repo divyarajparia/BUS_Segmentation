@@ -29,7 +29,7 @@ class BaseSegmentationExperiment(object):
         self.args = args
 
         self.args.device = get_deivce()
-        if args.seed_fix: self.fix_seed(self.args.device)
+        if args.seed_fix: self.fix_seed()
 
         print("STEP1. Load {} Test Dataset Loader...".format(args.test_data_type))
         test_image_transform, test_target_transform = self.transform_generator()
