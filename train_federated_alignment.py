@@ -71,6 +71,9 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
     def __init__(self, args):
         super(FederatedAlignment_IS2D, self).__init__(args)
         
+        # Set device for convenience (base class sets args.device)
+        self.device = self.args.device
+        
         # Federated learning specific parameters
         self.privacy_config = PrivacyConfig(
             epsilon=args.privacy_epsilon,
@@ -92,23 +95,43 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
                 self.model, self.source_statistics, self.alignment_weight, self.device
             )
     
+    def transform_generator(self):
+        """Generate image and target transforms for dataset loading."""
+        import torchvision.transforms as transforms
+        
+        transform_list = [
+            transforms.Resize((self.args.image_size, self.args.image_size)),
+            transforms.ToTensor(),
+        ]
+
+        target_transform_list = [
+            transforms.Resize((self.args.image_size, self.args.image_size)),
+            transforms.ToTensor(),
+        ]
+
+        return transforms.Compose(transform_list), transforms.Compose(target_transform_list)
+    
     def setup_datasets(self):
         """Setup datasets based on training phase"""
         print(f"🔄 Setting up datasets for phase: {self.phase}")
+        
+        # Generate transforms
+        train_transform, target_transform = self.transform_generator()
+        test_transform, test_target_transform = self.transform_generator()
         
         if self.phase == 'extract_stats':
             # Phase 1: Extract statistics from BUSI (Institution A)
             self.train_dataset = BUSISegmentationDataset(
                 dataset_dir=self.args.train_dataset_dir,
                 mode='train',
-                transform=self.args.train_transforms,
-                target_transform=self.args.target_transforms
+                transform=train_transform,
+                target_transform=target_transform
             )
             self.val_dataset = BUSISegmentationDataset(
                 dataset_dir=self.args.test_dataset_dir,
                 mode='test',
-                transform=self.args.test_transforms,
-                target_transform=self.args.target_transforms
+                transform=test_transform,
+                target_transform=test_target_transform
             )
             print(f"   ✅ BUSI dataset loaded for statistics extraction")
             
@@ -117,14 +140,14 @@ class FederatedAlignment_IS2D(BaseSegmentationExperiment):
             self.train_dataset = BUSUCLMSegmentationDataset(
                 dataset_dir=self.args.train_dataset_dir,
                 mode='train',
-                transform=self.args.train_transforms,
-                target_transform=self.args.target_transforms
+                transform=train_transform,
+                target_transform=target_transform
             )
             self.val_dataset = BUSUCLMSegmentationDataset(
                 dataset_dir=self.args.test_dataset_dir,
                 mode='test',
-                transform=self.args.test_transforms,
-                target_transform=self.args.target_transforms
+                transform=test_transform,
+                target_transform=test_target_transform
             )
             print(f"   ✅ BUS-UCLM dataset loaded for federated training")
             
@@ -404,6 +427,15 @@ def parse_arguments():
                        help='Training dataset directory')
     parser.add_argument('--test_dataset_dir', type=str, required=True,
                        help='Test dataset directory')
+    parser.add_argument('--test_data_type', type=str, default='BUSI',
+                       choices=['CVC-ClinicDB', 'Kvasir', 'CVC-300', 'CVC-ColonDB', 'ETIS-LaribPolypDB',
+                               'DSB2018', 'MonuSeg2018', 'ISIC2018', 'PH2', 'COVID19', 'COVID19_2', 
+                               'BUSI', 'STU', 'BUS-UCLM'],
+                       help='Type of test dataset for evaluation')
+    
+    # Base class requirements
+    parser.add_argument('--seed_fix', default=False, action='store_true',
+                       help='Fix random seed for reproducibility')
     
     # Model arguments
     parser.add_argument('--num_classes', type=int, default=1,
@@ -411,6 +443,8 @@ def parse_arguments():
     parser.add_argument('--cnn_backbone', type=str, default='resnet50',
                        choices=['resnet50', 'res2net50_v1b_26w_4s', 'resnest50'],
                        help='CNN backbone architecture')
+    parser.add_argument('--image_size', type=int, default=256,
+                       help='Input image size for transforms')
     
     # Training arguments
     parser.add_argument('--epochs', type=int, default=100,
