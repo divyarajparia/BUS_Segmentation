@@ -335,7 +335,7 @@ class CCSTStyleExtractor:
             stylized_image = self.style_transfer_model(content_image, style_mean, style_std, alpha)
             
             # Ensure proper range [0, 1]
-                stylized_image = torch.clamp(stylized_image, 0, 1)
+            stylized_image = torch.clamp(stylized_image, 0, 1)
             
             return stylized_image
     
@@ -465,7 +465,7 @@ class CCSTDataset(Dataset):
                 
                 # Convert back to PIL (grayscale)
                 stylized_tensor = stylized_tensor.squeeze(0).cpu().clamp(0, 1)
-                    stylized_image = to_pil_image(stylized_tensor)
+                stylized_image = to_pil_image(stylized_tensor)
                 
                 # Convert to grayscale if needed
                 if stylized_image.mode != 'L':
